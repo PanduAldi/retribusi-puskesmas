@@ -14,6 +14,6 @@ class Home extends BaseController
             return redirect()->to('/admin/dashboard');
         }
 
-        return view('welcome_message');
+        return view('dashboard/index');
     }
 }

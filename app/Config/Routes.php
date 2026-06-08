@@ -42,7 +42,13 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
 
 // E-Retribusi Routes
 $routes->group('eretribusi', ['namespace' => 'App\Controllers\Eretribusi', 'filter' => 'auth'], function($routes) {
+    // Billing routes
     $routes->get('konfirmasi/(:segment)', 'BillingController::konfirmasi/$1');
     $routes->post('generate', 'BillingController::generate');
     $routes->get('qris/(:segment)', 'BillingController::qris/$1');
+
+    // Transaksi routes
+    $routes->get('transaksi', 'TransaksiController::index');
+    $routes->get('transaksi/new', 'TransaksiController::create');
+    $routes->post('transaksi/store', 'TransaksiController::store');
 });
