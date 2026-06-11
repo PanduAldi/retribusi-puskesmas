@@ -17,9 +17,13 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; background: #f8f9fa; padding: 25px; border-radius: 12px; border: 1px solid #eee;">
             <div>
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 5px;">Informasi Puskesmas</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: #1a237e;">
-                    <i class="fas fa-hospital-alt" style="margin-right: 8px; color: var(--primary-color);"></i>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 5px;">Informasi Pasien</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #0d6efd;">
+                    <i class="fas fa-user-md" style="margin-right: 8px;"></i>
+                    No. RM: <?= esc($transaksi_master['no_dokumen']) ?>
+                </div>
+                <div style="font-size: 0.9rem; color: #555; margin-top: 5px;">
+                    <i class="fas fa-hospital-alt" style="margin-right: 8px;"></i>
                     <?= esc($puskesmas['prasarana'] ?? $puskesmas['nama_puskesmas'] ?? '-') ?>
                 </div>
             </div>
@@ -28,7 +32,7 @@
                 <div style="font-size: 1.25rem; font-weight: 800; color: #1a237e; letter-spacing: 1px;">
                     <?= esc($invoice) ?>
                 </div>
-                <div style="font-size: 0.8rem; color: #666;"><?= date('d F Y') ?></div>
+                <div style="font-size: 0.8rem; color: #666;"><?= date('d F Y', strtotime($transaksi_master['invoice_date'])) ?></div>
             </div>
         </div>
 
@@ -44,7 +48,7 @@
                 </tr>
             </thead>
             <tbody>
-                <?php $total = 0; foreach ($transaksi as $item) : ?>
+                <?php $total = 0; foreach ($items as $item) : ?>
                 <tr>
                     <td style="font-weight: 600; color: #444;"><?= esc($item['jenis']) ?></td>
                     <td style="text-align: center;">

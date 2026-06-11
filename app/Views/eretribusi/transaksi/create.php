@@ -45,25 +45,59 @@
             </div>
 
             <div class="form-group">
-                <label for="id_jenis">Jenis Layanan Retribusi</label>
-                <select id="id_jenis" name="id_jenis" required onchange="hitungTotal()" style="height: 50px; font-weight: 500;">
-                    <option value="">-- Pilih Jenis Layanan --</option>
-                    <?php foreach ($tarif as $t): ?>
-                        <option value="<?= $t['id_jenis'] ?>" data-tarif="<?= $t['tarif'] ?>">
-                            <?= $t['jenis'] ?> &mdash; Rp <?= number_format($t['tarif'], 0, ',', '.') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <small style="color: #888; margin-top: 5px; display: block;">*Tarif otomatis muncul berdasarkan jenis layanan yang dipilih.</small>
+                <label for="no_dokumen">Nomor Rekam Medik (SIMPUS)</label>
+                <input type="text" id="no_dokumen" name="no_dokumen" value="<?= old('no_dokumen') ?>" required placeholder="Contoh: 12.34.56" style="height: 50px; font-weight: 600; font-size: 1.1rem; border-color: #0d6efd;">
             </div>
 
-            <div class="form-group">
-                <label for="volume">Volume / Jumlah Layanan</label>
-                <input type="number" id="volume" name="volume" value="<?= old('volume', 1) ?>" min="1" step="1" required onchange="hitungTotal()" onkeyup="hitungTotal()" style="height: 50px;">
+            <div style="margin-top: 30px;">
+                <label style="font-weight: 700; color: #1a237e; margin-bottom: 15px; display: block;">Item Retribusi / Layanan</label>
+                <div style="overflow-x: auto;">
+                    <table class="table" id="table-items">
+                        <thead>
+                            <tr>
+                                <th>Jenis Layanan</th>
+                                <th style="width: 150px;">Volume</th>
+                                <th style="width: 200px; text-align: right;">Tarif</th>
+                                <th style="width: 200px; text-align: right;">Subtotal</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="item-container">
+                            <tr class="item-row">
+                                <td>
+                                    <select name="id_jenis[]" class="id_jenis" required onchange="updateTarif(this)" style="width: 100%;">
+                                        <option value="">-- Pilih Layanan --</option>
+                                        <?php foreach ($tarif as $t): ?>
+                                            <option value="<?= $t['id_jenis'] ?>" data-tarif="<?= $t['tarif'] ?>">
+                                                <?= $t['jenis'] ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" name="volume[]" class="volume" value="1" min="1" required onchange="hitungSubtotal(this)" onkeyup="hitungSubtotal(this)" style="width: 100%;">
+                                </td>
+                                <td style="text-align: right;">
+                                    <span class="tarif-display">Rp 0</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <span class="subtotal-display">Rp 0</span>
+                                    <input type="hidden" class="subtotal-val" value="0">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="addRow()">
+                    <i class="fas fa-plus"></i> Tambah Item
+                </button>
             </div>
 
             <div style="background: linear-gradient(135deg, #fff 0%, #f8f9ff 100%); padding: 25px; border-radius: 12px; border: 2px dashed #d0d7de; text-align: right; margin-top: 30px;">
-                <div style="font-size: 0.9rem; color: #666; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Estimasi Total Bayar</div>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Total Bayar</div>
                 <div style="font-size: 2.5rem; font-weight: 800; color: #1a237e;">
                     <span style="font-size: 1.5rem;">Rp</span> <span id="total_amount_display">0</span>
                 </div>
@@ -80,26 +114,68 @@
         </form>
 
         <script>
-        function hitungTotal() {
-            var select = document.getElementById('id_jenis');
-            var volume = document.getElementById('volume').value;
+        function addRow() {
+            var container = document.getElementById('item-container');
+            var firstRow = container.querySelector('.item-row');
+            var newRow = firstRow.cloneNode(true);
 
+            // Clear inputs
+            newRow.querySelector('.id_jenis').value = '';
+            newRow.querySelector('.volume').value = 1;
+            newRow.querySelector('.tarif-display').innerText = 'Rp 0';
+            newRow.querySelector('.subtotal-display').innerText = 'Rp 0';
+            newRow.querySelector('.subtotal-val').value = 0;
+
+            container.appendChild(newRow);
+        }
+
+        function removeRow(btn) {
+            var rows = document.querySelectorAll('.item-row');
+            if (rows.length > 1) {
+                btn.closest('.item-row').remove();
+                hitungTotal();
+            } else {
+                alert('Minimal harus ada 1 item retribusi.');
+            }
+        }
+
+        function updateTarif(select) {
+            var row = select.closest('.item-row');
             var tarif = 0;
             if (select.selectedIndex > 0) {
                 var option = select.options[select.selectedIndex];
                 tarif = parseFloat(option.getAttribute('data-tarif')) || 0;
             }
-
-            var total = tarif * (parseFloat(volume) || 0);
-
-            // Format rupiah
-            var formattedTotal = new Intl.NumberFormat('id-ID').format(total);
-            document.getElementById('total_amount_display').innerText = formattedTotal;
+            row.querySelector('.tarif-display').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(tarif);
+            hitungSubtotal(row.querySelector('.volume'));
         }
 
-        window.onload = function() {
+        function hitungSubtotal(input) {
+            var row = input.closest('.item-row');
+            var select = row.querySelector('.id_jenis');
+            var tarif = 0;
+            if (select.selectedIndex > 0) {
+                var option = select.options[select.selectedIndex];
+                tarif = parseFloat(option.getAttribute('data-tarif')) || 0;
+            }
+            var volume = parseFloat(input.value) || 0;
+            var subtotal = tarif * volume;
+
+            row.querySelector('.subtotal-display').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(subtotal);
+            row.querySelector('.subtotal-val').value = subtotal;
+
             hitungTotal();
-        };
+        }
+
+        function hitungTotal() {
+            var subtotals = document.querySelectorAll('.subtotal-val');
+            var total = 0;
+            subtotals.forEach(function(el) {
+                total += parseFloat(el.value) || 0;
+            });
+
+            document.getElementById('total_amount_display').innerText = new Intl.NumberFormat('id-ID').format(total);
+        }
         </script>
 
     <?php endif; ?>

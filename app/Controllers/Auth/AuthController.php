@@ -56,7 +56,7 @@ class AuthController extends BaseController
             $userModel->update($user['id'], ['last_login_at' => date('Y-m-d H:i:s')]);
 
             // Redirect based on role
-            if ($user['role'] === 'admin_kabupaten') {
+            if (in_array($user['role'], ['admin_kabupaten', 'admin_puskesmas'])) {
                 return redirect()->to('/admin/dashboard');
             }
             return redirect()->to('/');

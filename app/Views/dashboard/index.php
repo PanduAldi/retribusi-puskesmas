@@ -256,7 +256,7 @@
             </a>
 
             <?php if (session()->get('role') === 'admin_puskesmas') : ?>
-            <a href="#" class="menu-item">
+            <a href="<?= base_url('eretribusi/transaksi/laporan') ?>" class="menu-item">
                 <div class="icon-box">
                     <i class="fas fa-chart-line"></i>
                 </div>
@@ -274,13 +274,7 @@
             </a>
         </div>
 
-        <div class="card">
-            <h3><i class="fas fa-flask"></i> Mode Pengujian (Testing)</h3>
-            <p>Gunakan link di bawah ini untuk mensimulasikan alur sistem (Input -> Konfirmasi -> Generate):</p>
-            <a href="<?= base_url('eretribusi/konfirmasi/INV-2026-001') ?>" class="btn btn-primary">
-                <i class="fas fa-vial"></i> Test Flow INV-2026-001
-            </a>
-        </div>
+       
     </div>
 </body>
 </html>

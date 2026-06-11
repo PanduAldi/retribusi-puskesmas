@@ -36,16 +36,20 @@ class BillingController extends BaseController
         }
 
         // Tenant Isolation: Cek apakah user punya akses ke puskesmas ini
-        if (session()->get('role') !== 'admin_kabupaten' && session()->get('id_puskesmas') != $transaksi[0]['id_puskesmas']) {
+        if (session()->get('role') !== 'admin_kabupaten' && session()->get('id_puskesmas') != $transaksi['id_puskesmas']) {
             return redirect()->to('/')->with('notif_gagal', 'Anda tidak memiliki hak akses ke data transaksi puskesmas lain.');
         }
 
         // Ambil data puskesmas untuk keterangan billing
-        $idPuskesmas = $transaksi[0]['id_puskesmas'];
+        $idPuskesmas = $transaksi['id_puskesmas'];
         $puskesmas   = $this->puskesmasModel->find($idPuskesmas);
 
+        // Load Items
+        $items = (new \App\Models\TransaksiItemModel())->getItemsByTransaksi($transaksi['id']);
+
         return view('eretribusi/konfirmasi_pembayaran', [
-            'transaksi' => $transaksi,
+            'transaksi_master' => $transaksi,
+            'items' => $items,
             'puskesmas' => $puskesmas,
             'invoice'   => $invoice
         ]);
@@ -64,9 +68,10 @@ class BillingController extends BaseController
             return redirect()->back()->with('notif_gagal', 'Transaksi tidak valid.');
         }
 
-        // 2. Hitung total nominal
+        // 2. Ambil items dan hitung total nominal
+        $items = (new \App\Models\TransaksiItemModel())->getItemsByTransaksi($transaksi['id']);
         $totalNominal = 0;
-        foreach ($transaksi as $item) {
+        foreach ($items as $item) {
             $totalNominal += $item['amount'];
         }
 
@@ -75,7 +80,7 @@ class BillingController extends BaseController
         }
 
         // 3. Ambil data puskesmas
-        $idPuskesmas = $transaksi[0]['id_puskesmas'];
+        $idPuskesmas = $transaksi['id_puskesmas'];
         $puskesmas   = $this->puskesmasModel->find($idPuskesmas);
 
         // 4. Request ke Billing Server
@@ -83,7 +88,7 @@ class BillingController extends BaseController
             'kode_retribusi' => $puskesmas['kode_retribusi'],
             'nominal'        => $totalNominal,
             'keterangan'     => $puskesmas['prasarana'],
-            'no_dokumen'     => $invoice,
+            'no_dokumen'     => $transaksi['no_dokumen'], // Gunakan No Rekam Medik
         ];
 
         $response = $this->billingService->generateIdBilling($billingData);
@@ -121,22 +126,65 @@ class BillingController extends BaseController
     }
 
     /**
+     * Tampilkan halaman cek status billing
+     */
+    public function cekStatus()
+    {
+        return view('eretribusi/cek_status');
+    }
+
+    /**
+     * Proses pengecekan status ke Billing Server
+     */
+    public function prosesCekStatus()
+    {
+        $idBilling = $this->request->getPost('id_billing');
+
+        if (empty($idBilling)) {
+            return redirect()->back()->with('notif_gagal', 'ID Billing harus diisi.');
+        }
+
+        $status = $this->billingService->cekStatusPembayaran($idBilling);
+
+        if (!$status) {
+            return redirect()->back()->with('notif_gagal', 'Gagal mengambil data dari server billing.');
+        }
+
+        // Jika status sudah LUNAS, update di database lokal jika perlu
+        if ($status['Status'] === 'LUNAS') {
+            $this->transaksiModel->where('id_billing', $idBilling)
+                                ->set(['status' => 'lunas'])
+                                ->update();
+        }
+
+        return view('eretribusi/cek_status_result', [
+            'status' => $status,
+            'id_billing' => $idBilling
+        ]);
+    }
+
+    /**
      * Tampilkan halaman QRIS
      */
     public function qris(string $idBilling)
     {
-        $transaksi = $this->transaksiModel->where('id_billing', $idBilling)->findAll();
+        $transaksi = $this->transaksiModel
+            ->where('id_billing', $idBilling)
+            ->first();
 
         if (empty($transaksi)) {
             return redirect()->to('/')->with('notif_gagal', 'Data billing tidak ditemukan.');
         }
 
-        $idPuskesmas = $transaksi[0]['id_puskesmas'];
+        $items = (new \App\Models\TransaksiItemModel())->getItemsByTransaksi($transaksi['id']);
+
+        $idPuskesmas = $transaksi['id_puskesmas'];
         $puskesmas   = $this->puskesmasModel->find($idPuskesmas);
 
         return view('eretribusi/qris', [
             'id_billing' => $idBilling,
-            'transaksi'  => $transaksi,
+            'transaksi_master'  => $transaksi,
+            'items'      => $items,
             'puskesmas'  => $puskesmas
         ]);
     }

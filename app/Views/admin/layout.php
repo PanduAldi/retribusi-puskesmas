@@ -206,16 +206,21 @@
             <span>RETRIBUSI PKM</span>
         </div>
         <ul class="sidebar-menu">
+            <?php if (in_array(session()->get('role'), ['admin_kabupaten', 'admin_puskesmas'])) : ?>
             <li>
                 <a href="<?= base_url('admin/dashboard') ?>" class="<?= strpos(current_url(), 'dashboard') ? 'active' : '' ?>">
                     <i class="fas fa-th-large"></i> Dashboard
                 </a>
             </li>
+            <?php endif; ?>
+
             <li>
                 <a href="<?= base_url('eretribusi/transaksi') ?>" class="<?= strpos(current_url(), 'transaksi') ? 'active' : '' ?>">
                     <i class="fas fa-file-invoice-dollar"></i> Transaksi
                 </a>
             </li>
+
+            <?php if (session()->get('role') === 'admin_kabupaten') : ?>
             <li>
                 <a href="<?= base_url('admin/puskesmas') ?>" class="<?= strpos(current_url(), 'puskesmas') ? 'active' : '' ?>">
                     <i class="fas fa-hospital"></i> Data Puskesmas
@@ -231,11 +236,21 @@
                     <i class="fas fa-money-bill-wave"></i> Atur Tarif
                 </a>
             </li>
+            <?php endif; ?>
+
+            <?php if (in_array(session()->get('role'), ['admin_kabupaten', 'admin_puskesmas'])) : ?>
             <li>
                 <a href="<?= base_url('admin/users') ?>" class="<?= strpos(current_url(), 'users') ? 'active' : '' ?>">
                     <i class="fas fa-users-cog"></i> Manajemen User
                 </a>
             </li>
+            <?php endif; ?>
+            <!-- cek status billing -->
+            <li>
+                <a href="<?= base_url('eretribusi/billing/cek-status') ?>" class="<?= strpos(current_url(), 'cek-status') ? 'active' : '' ?>">
+                    <i class="fas fa-search"></i> Cek Status Billing
+                </a>
+
             <li style="margin-top: 20px;">
                 <a href="<?= base_url('logout') ?>" style="color: #ff6b6b;">
                     <i class="fas fa-sign-out-alt"></i> Keluar

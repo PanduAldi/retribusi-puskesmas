@@ -21,12 +21,16 @@
             <label>Role</label>
             <select name="role" required>
                 <option value="">Pilih Role</option>
+                <?php if (session()->get('role') === 'admin_kabupaten') : ?>
                 <option value="admin_kabupaten">Admin Kabupaten</option>
                 <option value="admin_puskesmas">Admin Puskesmas</option>
+                <?php endif; ?>
                 <option value="petugas">Petugas Puskesmas</option>
                 <option value="viewer">Viewer / Bendahara</option>
             </select>
         </div>
+
+        <?php if (session()->get('role') === 'admin_kabupaten') : ?>
         <div class="form-group">
             <label>Unit Kerja / Puskesmas</label>
             <select name="id_puskesmas">
@@ -36,6 +40,7 @@
                 <?php endforeach; ?>
             </select>
         </div>
+        <?php endif; ?>
         <div style="margin-top: 20px;">
             <button type="submit" class="btn btn-primary">Simpan Data</button>
             <a href="<?= base_url('admin/users') ?>" class="btn btn-danger">Batal</a>

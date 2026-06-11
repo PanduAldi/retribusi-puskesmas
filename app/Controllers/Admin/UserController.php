@@ -19,9 +19,15 @@ class UserController extends BaseController
 
     public function index()
     {
-        $users = $this->model->select('users.*, puskesmas.prasarana as nama_puskesmas')
-                            ->join('puskesmas', 'puskesmas.id = users.id_puskesmas', 'left')
-                            ->findAll();
+        $query = $this->model->select('users.*, puskesmas.prasarana as nama_puskesmas')
+                            ->join('puskesmas', 'puskesmas.id = users.id_puskesmas', 'left');
+
+        // Filter jika admin puskesmas
+        if (session()->get('role') === 'admin_puskesmas') {
+            $query->where('users.id_puskesmas', session()->get('id_puskesmas'));
+        }
+
+        $users = $query->findAll();
 
         return view('admin/users/index', [
             'title' => 'Manajemen Pengguna',
@@ -39,12 +45,24 @@ class UserController extends BaseController
 
     public function store()
     {
+        $role = $this->request->getPost('role');
+        $idPuskesmas = $this->request->getPost('id_puskesmas');
+
+        // Jika admin puskesmas, paksa id_puskesmas ke unitnya sendiri
+        // dan cegah pembuatan admin_kabupaten
+        if (session()->get('role') === 'admin_puskesmas') {
+            $idPuskesmas = session()->get('id_puskesmas');
+            if ($role === 'admin_kabupaten') {
+                return redirect()->back()->withInput()->with('notif_gagal', 'Anda tidak diizinkan membuat user dengan role Admin Kabupaten.');
+            }
+        }
+
         $data = [
             'username' => $this->request->getPost('username'),
             'password_hash' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
             'nama' => $this->request->getPost('nama'),
-            'role' => $this->request->getPost('role'),
-            'id_puskesmas' => $this->request->getPost('id_puskesmas') ?: null,
+            'role' => $role,
+            'id_puskesmas' => $idPuskesmas ?: null,
             'is_active' => 1
         ];
 
@@ -57,6 +75,19 @@ class UserController extends BaseController
         if ($id == session()->get('user_id')) {
             return redirect()->to('admin/users')->with('notif_gagal', 'Tidak dapat menghapus diri sendiri.');
         }
+
+        $user = $this->model->find($id);
+        if (!$user) {
+            return redirect()->to('admin/users')->with('notif_gagal', 'User tidak ditemukan.');
+        }
+
+        // Cek otorisasi jika admin puskesmas
+        if (session()->get('role') === 'admin_puskesmas') {
+            if ($user['id_puskesmas'] != session()->get('id_puskesmas')) {
+                return redirect()->to('admin/users')->with('notif_gagal', 'Anda tidak memiliki akses untuk menghapus user dari unit lain.');
+            }
+        }
+
         $this->model->delete($id);
         return redirect()->to('admin/users')->with('notif_sukses', 'User berhasil dihapus.');
     }

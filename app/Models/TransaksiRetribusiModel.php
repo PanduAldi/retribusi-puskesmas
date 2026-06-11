@@ -11,22 +11,19 @@ class TransaksiRetribusiModel extends Model
     protected $returnType       = 'array';
     protected $allowedFields    = [
         'id_puskesmas',
-        'id_jenis',
+        'no_dokumen',
         'invoice',
         'invoice_date',
         'id_billing',
-        'volume',
-        'amount',
         'status'
     ];
     protected $useTimestamps    = false;
 
     public function getByInvoice(string $invoice): array
     {
-        return $this->select('transaksi_retribusi.*, jenis_retribusi.jenis')
-            ->join('jenis_retribusi', 'jenis_retribusi.id = transaksi_retribusi.id_jenis')
+        return $this->select('transaksi_retribusi.*')
             ->where('transaksi_retribusi.invoice', $invoice)
-            ->findAll();
+            ->first() ?? [];
     }
 
     public function isInvoiceExists(string $invoice): bool

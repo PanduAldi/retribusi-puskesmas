@@ -13,11 +13,35 @@ class DashboardController extends BaseController
         $puskesmasModel = new PuskesmasModel();
         $transaksiModel = new TransaksiRetribusiModel();
 
+        $role = session()->get('role');
+        $idPuskesmas = session()->get('id_puskesmas');
+
+        if ($role === 'admin_puskesmas') {
+            $total_puskesmas = 1;
+            $total_transaksi = $transaksiModel->where('id_puskesmas', $idPuskesmas)->countAllResults();
+            $total_pendapatan = $transaksiModel->db->table('transaksi_item')
+                ->join('transaksi_retribusi', 'transaksi_retribusi.id = transaksi_item.id_transaksi')
+                ->where('transaksi_retribusi.id_puskesmas', $idPuskesmas)
+                ->where('transaksi_retribusi.status', 1)
+                ->selectSum('amount')
+                ->get()->getRowArray()['amount'] ?? 0;
+            $puskesmas_list = $puskesmasModel->where('id', $idPuskesmas)->findAll();
+        } else {
+            $total_puskesmas = $puskesmasModel->countAllResults();
+            $total_transaksi = $transaksiModel->countAllResults();
+            $total_pendapatan = $transaksiModel->db->table('transaksi_item')
+                ->join('transaksi_retribusi', 'transaksi_retribusi.id = transaksi_item.id_transaksi')
+                ->where('transaksi_retribusi.status', 1)
+                ->selectSum('amount')
+                ->get()->getRowArray()['amount'] ?? 0;
+            $puskesmas_list = $puskesmasModel->findAll();
+        }
+
         $data = [
-            'total_puskesmas' => $puskesmasModel->countAllResults(),
-            'total_transaksi' => $transaksiModel->countAllResults(),
-            'total_pendapatan' => $transaksiModel->selectSum('amount')->first()['amount'] ?? 0,
-            'puskesmas_list' => $puskesmasModel->findAll(),
+            'total_puskesmas' => $total_puskesmas,
+            'total_transaksi' => $total_transaksi,
+            'total_pendapatan' => $total_pendapatan,
+            'puskesmas_list' => $puskesmas_list,
         ];
 
         return view('admin/dashboard', $data);

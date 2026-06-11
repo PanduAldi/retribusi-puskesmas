@@ -4,6 +4,7 @@ namespace App\Controllers\Eretribusi;
 
 use App\Controllers\BaseController;
 use App\Models\TransaksiRetribusiModel;
+use App\Models\TransaksiItemModel;
 use App\Models\TarifRetribusiModel;
 use App\Models\JenisRetribusiModel;
 use App\Models\PuskesmasModel;
@@ -13,6 +14,7 @@ use Config\Services;
 class TransaksiController extends BaseController
 {
     protected $transaksiModel;
+    protected $itemModel;
     protected $tarifModel;
     protected $jenisModel;
     protected $puskesmasModel;
@@ -20,6 +22,7 @@ class TransaksiController extends BaseController
     public function __construct()
     {
         $this->transaksiModel = new TransaksiRetribusiModel();
+        $this->itemModel = new TransaksiItemModel();
         $this->tarifModel = new TarifRetribusiModel();
         $this->jenisModel = new JenisRetribusiModel();
         $this->puskesmasModel = new PuskesmasModel();
@@ -38,22 +41,33 @@ class TransaksiController extends BaseController
             $idPuskesmas = null;
         }
 
+        $query = $this->transaksiModel
+            ->select('transaksi_retribusi.*, puskesmas.prasarana')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas');
+
         if ($idPuskesmas) {
-            $transaksi = $this->transaksiModel
-                ->select('transaksi_retribusi.*, jenis_retribusi.jenis, puskesmas.prasarana')
-                ->join('jenis_retribusi', 'jenis_retribusi.id = transaksi_retribusi.id_jenis')
-                ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas')
-                ->where('transaksi_retribusi.id_puskesmas', $idPuskesmas)
-                ->orderBy('transaksi_retribusi.invoice_date', 'DESC')
-                ->findAll();
-        } else {
-            // Admin kabupaten melihat semua transaksi
-            $transaksi = $this->transaksiModel
-                ->select('transaksi_retribusi.*, jenis_retribusi.jenis, puskesmas.prasarana')
-                ->join('jenis_retribusi', 'jenis_retribusi.id = transaksi_retribusi.id_jenis')
-                ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas')
-                ->orderBy('transaksi_retribusi.invoice_date', 'DESC')
-                ->findAll();
+            $query->where('transaksi_retribusi.id_puskesmas', $idPuskesmas);
+        }
+
+        $transaksiRaw = $query->orderBy('transaksi_retribusi.invoice_date', 'DESC')
+            ->findAll();
+
+        $transaksi = [];
+        foreach ($transaksiRaw as $trx) {
+            $items = $this->itemModel->getItemsByTransaksi($trx['id']);
+
+            // Total volume dan amount
+            $totalAmount = 0;
+            $itemNames = [];
+            foreach ($items as $item) {
+                $totalAmount += $item['amount'];
+                $itemNames[] = $item['jenis'];
+            }
+
+            $trx['jenis'] = implode(', ', $itemNames);
+            $trx['amount'] = $totalAmount;
+            $trx['volume'] = count($items); // Tampilkan jumlah jenis layanan
+            $transaksi[] = $trx;
         }
 
         return view('eretribusi/transaksi/index', [
@@ -118,9 +132,9 @@ class TransaksiController extends BaseController
         // Validation
         $validation =  \Config\Services::validation();
         $validation->setRules([
-            'id_jenis' => 'required|numeric',
-            'volume' => 'required|numeric|greater_than[0]',
-            // Amount validation will be custom since it depends on tarif * volume
+            'no_dokumen' => 'required',
+            'id_jenis.*' => 'required|numeric',
+            'volume.*' => 'required|numeric|greater_than[0]',
         ]);
 
         if (!$this->validate($validation->getRules())) {
@@ -132,44 +146,48 @@ class TransaksiController extends BaseController
             ? session()->get('id_puskesmas')
             : $this->request->getPost('id_puskesmas');
 
-        $idJenis = $this->request->getPost('id_jenis');
-        $volume = (float) $this->request->getPost('volume');
-
-        // Get tarif for calculation
-        $tarifData = $this->tarifModel->where('id_puskesmas', $idPuskesmas)
-                                     ->where('id_jenis', $idJenis)
-                                     ->first();
-
-        if (!$tarifData) {
-            return redirect()->back()->withInput()->with('notif_gagal', 'Tarif tidak ditemukan untuk jenis retribusi dan puskesmas tersebut.');
-        }
-
-        $tarifPerUnit = (float) $tarifData['tarif'];
-        $amount = $volume * $tarifPerUnit;
-
-        // Handle amount = 0 rule: if amount is 0, still allow but with special handling
-        // According to requirement, we need to handle amount = 0 rule
-        // We'll allow it but might need special processing later
+        $noDokumen = $this->request->getPost('no_dokumen');
+        $idJenisArr = $this->request->getPost('id_jenis');
+        $volumeArr = $this->request->getPost('volume');
 
         // Generate unique invoice number
         $invoice = $this->generateInvoiceNumber($idPuskesmas);
 
         // Prepare data for insertion
-        $data = [
+        $dataTransaksi = [
             'id_puskesmas' => $idPuskesmas,
-            'id_jenis' => $idJenis,
-            'invoice' => $invoice,
+            'no_dokumen'   => $noDokumen,
+            'invoice'      => $invoice,
             'invoice_date' => date('Y-m-d'),
-            'volume' => $volume,
-            'amount' => $amount,
-            'status' => 'pending' // Default status
+            'status'       => 'pending'
         ];
 
         // Save to database
         $db = \Config\Database::connect();
         $db->transStart();
 
-        $insertId = $this->transaksiModel->insert($data);
+        $idTransaksi = $this->transaksiModel->insert($dataTransaksi);
+
+        $totalAmount = 0;
+        foreach ($idJenisArr as $key => $idJenis) {
+            $volume = (float) $volumeArr[$key];
+
+            // Get tarif for calculation
+            $tarifData = $this->tarifModel->where('id_puskesmas', $idPuskesmas)
+                                         ->where('id_jenis', $idJenis)
+                                         ->first();
+
+            $tarifPerUnit = $tarifData ? (float) $tarifData['tarif'] : 0;
+            $amount = $volume * $tarifPerUnit;
+            $totalAmount += $amount;
+
+            $this->itemModel->insert([
+                'id_transaksi' => $idTransaksi,
+                'id_jenis'     => $idJenis,
+                'volume'       => $volume,
+                'amount'       => $amount,
+            ]);
+        }
 
         $db->transComplete();
 
@@ -177,12 +195,52 @@ class TransaksiController extends BaseController
             return redirect()->back()->withInput()->with('notif_gagal', 'Gagal menyimpan transaksi.');
         }
 
-        $message = $amount == 0
+        $message = $totalAmount == 0
             ? 'Transaksi berhasil disimpan dengan nilai nol. Silahkan lakukan pengecekan tarif.'
             : 'Transaksi berhasil disimpan.';
 
         // Redirect ke halaman konfirmasi pembayaran
         return redirect()->to('/eretribusi/konfirmasi/' . $invoice)->with('notif_sukses', $message);
+    }
+
+    /**
+     * Laporan Pendapatan per Unit (Puskesmas)
+     */
+    public function laporan()
+    {
+        // Tenant Isolation: Admin Puskesmas hanya melihat unitnya sendiri
+        if (session()->get('role') !== 'admin_kabupaten') {
+            $idPuskesmas = session()->get('id_puskesmas');
+        } else {
+            $idPuskesmas = $this->request->getGet('id_puskesmas');
+        }
+
+        $query = $this->transaksiModel->select('transaksi_retribusi.*');
+
+        if ($idPuskesmas) {
+            $query->where('id_puskesmas', $idPuskesmas);
+        }
+
+        $laporanRaw = $query->orderBy('invoice_date', 'DESC')->findAll();
+
+        $laporan = [];
+        foreach ($laporanRaw as $row) {
+            $items = $this->itemModel->getItemsByTransaksi($row['id']);
+            $totalAmount = 0;
+            $itemNames = [];
+            foreach ($items as $item) {
+                $totalAmount += $item['amount'];
+                $itemNames[] = $item['jenis'];
+            }
+            $row['jenis'] = implode(', ', $itemNames);
+            $row['amount'] = $totalAmount;
+            $laporan[] = $row;
+        }
+
+        return view('eretribusi/transaksi/laporan', [
+            'laporan' => $laporan,
+            'idPuskesmas' => $idPuskesmas
+        ]);
     }
 
     /**

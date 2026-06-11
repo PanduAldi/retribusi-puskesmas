@@ -11,7 +11,7 @@ $routes->post('login', 'Auth\AuthController::attemptLogin');
 $routes->get('logout', 'Auth\AuthController::logout');
 
 // Admin Kabupaten Routes
-$routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'auth:admin_kabupaten'], function($routes) {
+$routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'auth:admin_kabupaten,admin_puskesmas'], function($routes) {
     $routes->get('dashboard', 'DashboardController::index');
 
     // Puskesmas CRUD
@@ -46,9 +46,12 @@ $routes->group('eretribusi', ['namespace' => 'App\Controllers\Eretribusi', 'filt
     $routes->get('konfirmasi/(:segment)', 'BillingController::konfirmasi/$1');
     $routes->post('generate', 'BillingController::generate');
     $routes->get('qris/(:segment)', 'BillingController::qris/$1');
+    $routes->get('billing/cek-status', 'BillingController::cekStatus');
+    $routes->post('billing/cek-status', 'BillingController::prosesCekStatus');
 
     // Transaksi routes
     $routes->get('transaksi', 'TransaksiController::index');
     $routes->get('transaksi/new', 'TransaksiController::create');
     $routes->post('transaksi/store', 'TransaksiController::store');
+    $routes->get('transaksi/laporan', 'TransaksiController::laporan');
 });

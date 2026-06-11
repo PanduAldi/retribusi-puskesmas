@@ -3,22 +3,28 @@
 <?= $this->section('content') ?>
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
     <div class="card">
-        <h3>Daftar Tarif Retribusi</h3>
+    <h3>Daftar Tarif Retribusi</h3>
+    <?php
+        $grouped = [];
+        foreach ($tarif as $t) {
+            $grouped[$t['nama_puskesmas']][] = $t;
+        }
+    ?>
+    <?php foreach ($grouped as $puskesmasName => $items): ?>
+        <h4 style="margin-top:12px; font-weight:600; color:#1a237e;"><?= esc($puskesmasName) ?></h4>
         <table>
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Puskesmas</th>
                     <th>Jenis Layanan</th>
                     <th>Tarif</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($tarif as $t) : ?>
+                <?php foreach ($items as $t): ?>
                 <tr>
                     <td><?= $t['id'] ?></td>
-                    <td><?= esc($t['nama_puskesmas']) ?></td>
                     <td><?= esc($t['nama_jenis']) ?></td>
                     <td>Rp <?= number_format($t['tarif'], 0, ',', '.') ?></td>
                     <td>
@@ -28,7 +34,8 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
+    <?php endforeach; ?>
+</div>
 
     <div class="card">
         <h3>Atur Tarif Baru / Update</h3>
