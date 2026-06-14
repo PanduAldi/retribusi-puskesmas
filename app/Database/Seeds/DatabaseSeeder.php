@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call('PuskesmasSeeder');
         $this->call('JenisRetribusiSeeder');
-        $this->call('TarifRetribusiSeeder');
+        $this->call('BrebesTarifSeeder');
         $this->call('UserSeeder');
     }
 }

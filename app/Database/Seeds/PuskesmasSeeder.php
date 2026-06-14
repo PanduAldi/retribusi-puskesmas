@@ -10,15 +10,23 @@ class PuskesmasSeeder extends Seeder
     {
         $data = [
             [
-                'prasarana'      => 'Puskesmas Katang',
-                'kode_retribusi' => 'PK001',
+                'prasarana'      => 'Puskesmas Brebes',
+                'kode_retribusi' => '11001',
             ],
             [
-                'prasarana'      => 'Puskesmas Baringin',
-                'kode_retribusi' => 'PK002',
+                'prasarana'      => 'Puskesmas Wanasari',
+                'kode_retribusi' => '11002',
             ],
         ];
-        // Insert batch
-        $this->db->table('puskesmas')->insertBatch($data);
+
+        foreach ($data as $row) {
+            $exists = $this->db->table('puskesmas')
+                ->where('prasarana', $row['prasarana'])
+                ->countAllResults();
+
+            if (!$exists) {
+                $this->db->table('puskesmas')->insert($row);
+            }
+        }
     }
 }
