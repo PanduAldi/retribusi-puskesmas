@@ -50,26 +50,39 @@ class TransaksiController extends BaseController
         $transaksiRaw = $query->orderBy('transaksi_retribusi.invoice_date', 'DESC')
             ->findAll();
 
+        $totalTerbayar = 0;
+        $totalBelumTerbayar = 0;
+        $totalTransaksi = count($transaksiRaw);
+
         $transaksi = [];
         foreach ($transaksiRaw as $trx) {
             $items = $this->itemModel->getItemsByTransaksi($trx['id']);
 
             // Total volume dan amount
-            $totalAmount = 0;
+            $currentAmount = 0;
             $itemNames = [];
             foreach ($items as $item) {
-                $totalAmount += $item['amount'];
+                $currentAmount += $item['amount'];
                 $itemNames[] = $item['jenis'];
             }
-
+            $trx['items_detail'] = $items; // Simpan detail item
             $trx['jenis'] = implode(', ', $itemNames);
-            $trx['amount'] = $totalAmount;
+            $trx['amount'] = $currentAmount;
             $trx['volume'] = count($items); // Tampilkan jumlah jenis layanan
             $transaksi[] = $trx;
+
+            if ($trx['status'] == 'paid') {
+                $totalTerbayar += $currentAmount;
+            } else {
+                $totalBelumTerbayar += $currentAmount;
+            }
         }
 
         return view('eretribusi/transaksi/index', [
-            'transaksi' => $transaksi
+            'transaksi' => $transaksi,
+            'totalTerbayar' => $totalTerbayar,
+            'totalBelumTerbayar' => $totalBelumTerbayar,
+            'totalTransaksi' => $totalTransaksi
         ]);
     }
 

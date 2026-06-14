@@ -88,7 +88,7 @@ class BillingService
         // In local development we can return a mock object so the UI can continue testing.
         if (env('CI_ENVIRONMENT') === 'development') {
             return [
-                'IdBilling' => 'MOCK-' . uniqid('', true),
+                'IdBilling' => '290032504302235',
                 'NoDokumen'=> $data['no_dokumen'],
                 'Nominal'  => $data['nominal'],
                 'Status'   => 'Pending',
