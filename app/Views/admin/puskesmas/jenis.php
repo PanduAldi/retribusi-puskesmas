@@ -90,6 +90,26 @@
         font-size: 0.95rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .select-all-label {
+        font-size: 0.75rem;
+        text-transform: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #666;
+        user-select: none;
+    }
+
+    .select-all-label input {
+        width: 14px;
+        height: 14px;
+        margin: 0;
     }
 
     .services-grid {
@@ -201,7 +221,12 @@
                 <input type="hidden" name="id_puskesmas" value="<?= $p['id'] ?>">
 
                 <div class="modal-body">
-                    <p style="margin-bottom: 20px; color: #666; font-size: 0.9rem;">Pilih jenis layanan yang disediakan oleh <strong><?= esc($p['prasarana']) ?></strong>:</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <p style="margin-bottom: 0; color: #666; font-size: 0.9rem;">Pilih jenis layanan yang disediakan oleh <strong><?= esc($p['prasarana']) ?></strong>:</p>
+                        <label class="select-all-label" style="font-weight: 600; color: var(--primary-color);">
+                            <input type="checkbox" onclick="selectAllByPuskesmas(<?= $p['id'] ?>, this)"> Pilih Semua Layanan
+                        </label>
+                    </div>
 
                     <?php
                     // Group services by category
@@ -213,9 +238,15 @@
                     ksort($groupedServices);
 
                     foreach ($groupedServices as $category => $services) :
+                        $catSlug = url_title($category, '-', true);
                     ?>
-                    <div class="category-section">
-                        <div class="category-title"><?= esc($category) ?></div>
+                    <div class="category-section" id="cat-section-<?= $p['id'] ?>-<?= $catSlug ?>">
+                        <div class="category-title">
+                            <?= esc($category) ?>
+                            <label class="select-all-label">
+                                <input type="checkbox" onclick="selectAllByCategory('<?= $p['id'] ?>', '<?= $catSlug ?>', this)"> Select All
+                            </label>
+                        </div>
                         <div class="services-grid">
                             <?php foreach ($services as $j) :
                                 $isChecked = isset($mappings[$p['id']]) && in_array($j['id'], $mappings[$p['id']]);
@@ -256,6 +287,28 @@
     function toggleCheckbox(element) {
         const checkbox = element.querySelector('input[type="checkbox"]');
         checkbox.checked = !checkbox.checked;
+    }
+
+    function selectAllByPuskesmas(puskesmasId, source) {
+        const modal = document.getElementById('modal-mapping-' + puskesmasId);
+        const checkboxes = modal.querySelectorAll('.services-grid input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+        });
+
+        // Update category checkboxes
+        const catCheckboxes = modal.querySelectorAll('.category-title input[type="checkbox"]');
+        catCheckboxes.forEach(cb => {
+            cb.checked = source.checked;
+        });
+    }
+
+    function selectAllByCategory(puskesmasId, catSlug, source) {
+        const section = document.getElementById('cat-section-' + puskesmasId + '-' + catSlug);
+        const checkboxes = section.querySelectorAll('.services-grid input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+        });
     }
 
     // Close on click outside
