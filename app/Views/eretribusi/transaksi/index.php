@@ -204,9 +204,15 @@
                             </td>
                             <td style="text-align: center;">
                                 <?php if ($trx['status'] != 'paid' && $trx['status'] != 'lunas'): ?>
-                                    <a href="<?= base_url('eretribusi/konfirmasi/' . $trx['invoice']) ?>" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 6px;">
-                                        <i class="fas fa-credit-card"></i> Bayar
-                                    </a>
+                                    <?php if (!empty($trx['id_billing'])): ?>
+                                        <a href="<?= base_url('eretribusi/qris/' . $trx['id_billing']) ?>" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 6px;">
+                                            <i class="fas fa-qrcode"></i> Lihat QRIS
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= base_url('eretribusi/konfirmasi/' . $trx['invoice']) ?>" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 6px;">
+                                            <i class="fas fa-credit-card"></i> Bayar
+                                        </a>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <span style="color: #999; font-size: 0.85rem;">-</span>
                                 <?php endif; ?>
@@ -329,9 +335,15 @@
         actionContainer.innerHTML = '';
         if (trx.status !== 'paid' && trx.status !== 'lunas') {
             const payBtn = document.createElement('a');
-            payBtn.href = `<?= base_url('eretribusi/konfirmasi/') ?>/${trx.invoice}`;
-            payBtn.className = 'btn btn-primary';
-            payBtn.innerHTML = `<i class="fas fa-credit-card"></i> Bayar Sekarang`;
+            if (trx.id_billing) {
+                payBtn.href = `<?= base_url('eretribusi/qris/') ?>/${trx.id_billing}`;
+                payBtn.className = 'btn btn-success';
+                payBtn.innerHTML = `<i class="fas fa-qrcode"></i> Lihat QRIS / Bayar`;
+            } else {
+                payBtn.href = `<?= base_url('eretribusi/konfirmasi/') ?>/${trx.invoice}`;
+                payBtn.className = 'btn btn-primary';
+                payBtn.innerHTML = `<i class="fas fa-credit-card"></i> Bayar Sekarang`;
+            }
             actionContainer.appendChild(payBtn);
         }
 
