@@ -1,69 +1,65 @@
-# CodeIgniter 4 Application Starter
+# Retribusi Puskesmas (CodeIgniter 4)
 
-## What is CodeIgniter?
+Aplikasi manajemen penagihan dan retribusi untuk Puskesmas berbasis CodeIgniter 4.7.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## Fitur Utama
+- Manajemen Penagihan (Billing)
+- Sistem Retribusi Puskesmas
+- Service Layer untuk logika bisnis yang kompleks
+- Arsitektur MVC (Model, View, Controller)
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Persyaratan Sistem (Host)
+- Docker & Docker Compose
+- Ubuntu 20.04+ (atau OS lain yang mendukung Docker)
+- MySQL Server 8.0+ (Terpasang di host/Ubuntu)
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## Instalasi & Menjalankan (Docker)
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+Project ini dikonfigurasi menggunakan Docker agar kompatibel dengan PHP 8.2 meskipun host menggunakan Ubuntu 20.04.
 
-## Installation & updates
+### 1. Persiapan .env
+Salin file `env` menjadi `.env` dan sesuaikan konfigurasinya:
+```bash
+cp env .env
+```
+Pastikan pengaturan database mengarah ke host:
+```env
+database.default.hostname = host.docker.internal
+database.default.database = retribusi_puskesmas
+database.default.username = root
+database.default.password = password_mysql_anda
+```
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+### 2. Jalankan Container
+```bash
+docker-compose up --build -d
+```
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+### 3. Install Dependensi (Composer)
+Karena folder `vendor` di-ignore oleh git, jalankan ini pertama kali:
+```bash
+docker-compose exec app composer install
+```
 
-## Setup
+### 4. Atur Izin Folder
+Berikan izin tulis pada folder `writable`:
+```bash
+sudo chmod -R 777 writable
+```
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+### 5. Akses Aplikasi
+Aplikasi dapat diakses melalui: `http://localhost:8080` atau `http://nama-domain.com:8080` (jika menggunakan reverse proxy).
 
-## Important Change with index.php
+## Perintah Pengembangan
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+- **Menambah Library**: `docker-compose exec app composer require <nama/library>`
+- **Jalankan Migrasi**: `docker-compose exec app php spark migrate`
+- **Membuat Controller**: `docker-compose exec app php spark make:controller <Nama>`
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## Keamanan
+- Folder `public/` digunakan sebagai DocumentRoot.
+- Hanya folder `writable/` yang memiliki izin tulis bagi web server.
+- Database host diakses melalui gateway internal Docker.
 
-**Please** read the user guide for a better explanation of how CI4 works!
-
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
-
-## Server Requirements
-
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+---
+🤖 Generated with [Claude Code](https://claude.com)
