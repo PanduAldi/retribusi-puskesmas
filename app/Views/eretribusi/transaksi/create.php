@@ -112,6 +112,35 @@
         border-top: 1px solid #f0f2f5;
         font-size: 0.9rem;
     }
+
+    /* Select2 Custom Styling to match existing CSS */
+    .select2-container--default .select2-selection--single {
+        height: 46px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 8px 15px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 44px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 28px;
+        padding-left: 0;
+        color: #1a237e;
+        font-weight: 600;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--primary-color);
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border-radius: 6px;
+    }
+    .select2-dropdown {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1050;
+    }
 </style>
 
 <div class="card-header" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
@@ -265,10 +294,38 @@
     </form>
 
     <script>
+    $(document).ready(function() {
+        initSelect2();
+    });
+
+    function initSelect2() {
+        $('.id_jenis').select2({
+            placeholder: '-- Cari Layanan --',
+            allowClear: true,
+            language: {
+                noResults: function() {
+                    return "Layanan tidak ditemukan";
+                }
+            }
+        }).on('select2:select', function(e) {
+            updateTarif(this);
+        });
+    }
+
     function addRow() {
         var container = document.getElementById('item-list-container');
         var firstRow = container.querySelector('.item-row');
+
+        // Destroy select2 before cloning to avoid issues
+        $(firstRow).find('.id_jenis').select2('destroy');
+
         var newRow = firstRow.cloneNode(true);
+
+        // Re-init select2 on original row
+        $(firstRow).find('.id_jenis').select2({
+            placeholder: '-- Cari Layanan --',
+            allowClear: true
+        });
 
         // Clear inputs & displays
         newRow.querySelector('.id_jenis').value = '';
@@ -281,6 +338,14 @@
         newRow.style.opacity = '0';
         newRow.style.transform = 'translateY(10px)';
         container.appendChild(newRow);
+
+        // Init select2 on the new row
+        $(newRow).find('.id_jenis').select2({
+            placeholder: '-- Cari Layanan --',
+            allowClear: true
+        }).on('select2:select', function(e) {
+            updateTarif(this);
+        });
 
         setTimeout(() => {
             newRow.style.transition = '0.3s';
