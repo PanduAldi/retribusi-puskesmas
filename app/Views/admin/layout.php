@@ -194,13 +194,38 @@
         .alert-danger { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
 
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); transition: 0.3s; }
+            .sidebar { transform: translateX(-100%); transition: 0.3s; width: 240px; }
+            .sidebar.show { transform: translateX(0); }
             .main-content { margin-left: 0; }
+            .navbar { padding: 0 15px; }
+            .mobile-toggle { display: block !important; }
         }
+
+        .mobile-toggle {
+            display: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #1a237e;
+            padding: 10px;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.show { display: block; }
     </style>
 </head>
 <body>
-    <div class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <i class="fas fa-hospital-user"></i>
             <span>RETRIBUSI PKM</span>
@@ -222,18 +247,18 @@
 
             <?php if (session()->get('role') === 'admin_kabupaten') : ?>
             <li>
-                <a href="<?= base_url('admin/puskesmas') ?>" class="<?= strpos(current_url(), 'puskesmas') ? 'active' : '' ?>">
+                <a href="<?= base_url('admin/puskesmas') ?>" class="<?= strpos(current_url(), 'puskesmas') && !strpos(current_url(), 'jenis') ? 'active' : '' ?>">
                     <i class="fas fa-hospital"></i> Data Puskesmas
                 </a>
             </li>
             <li>
-                <a href="<?= base_url('admin/jenis-retribusi') ?>" class="<?= strpos(current_url(), 'jenis-retribusi') ? 'active' : '' ?>">
-                    <i class="fas fa-tags"></i> Jenis Retribusi
+                <a href="<?= base_url('admin/puskesmas/jenis') ?>" class="<?= strpos(current_url(), 'puskesmas/jenis') ? 'active' : '' ?>">
+                    <i class="fas fa-map-marked-alt"></i> Mapping Layanan PKM
                 </a>
             </li>
             <li>
-                <a href="<?= base_url('admin/tarif') ?>" class="<?= strpos(current_url(), 'tarif') ? 'active' : '' ?>">
-                    <i class="fas fa-money-bill-wave"></i> Atur Tarif
+                <a href="<?= base_url('admin/jenis-retribusi') ?>" class="<?= strpos(current_url(), 'jenis-retribusi') ? 'active' : '' ?>">
+                    <i class="fas fa-tags"></i> Master Layanan & Tarif
                 </a>
             </li>
             <?php endif; ?>
@@ -259,9 +284,17 @@
         </ul>
     </div>
 
+    <!-- Modals Section -->
+    <?= $this->renderSection('modals') ?>
+
     <div class="main-content">
         <div class="navbar">
-            <h2 style="font-size: 1.2rem; font-weight: 700; color: #1a237e;"><?= $title ?? 'Admin Panel' ?></h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="mobile-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <h2 style="font-size: 1.2rem; font-weight: 700; color: #1a237e;"><?= $title ?? 'Admin Panel' ?></h2>
+            </div>
             <div class="user-nav">
                 <div class="user-info">
                     <div style="font-weight: 700; font-size: 0.9rem;"><?= session()->get('nama') ?></div>
@@ -291,5 +324,11 @@
             <?= $this->renderSection('content') ?>
         </div>
     </div>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        }
+    </script>
 </body>
 </html>

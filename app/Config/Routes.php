@@ -22,7 +22,11 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
     $routes->post('puskesmas/update/(:num)', 'PuskesmasController::update/$1');
     $routes->get('puskesmas/delete/(:num)', 'PuskesmasController::delete/$1');
 
-    // Jenis Retribusi CRUD
+    // Puskesmas Jenis Mapping
+    $routes->get('puskesmas/jenis', 'PuskesmasJenisController::index');
+    $routes->post('puskesmas/jenis/save', 'PuskesmasJenisController::save');
+
+    // Master Layanan & Tarif (sebelumnya Jenis Retribusi)
     $routes->get('jenis-retribusi', 'JenisRetribusiController::index');
     $routes->post('jenis-retribusi/store', 'JenisRetribusiController::store');
     $routes->post('jenis-retribusi/update/(:num)', 'JenisRetribusiController::update/$1');
@@ -32,12 +36,9 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
     $routes->get('users', 'UserController::index');
     $routes->get('users/new', 'UserController::create');
     $routes->post('users/store', 'UserController::store');
+    $routes->get('users/edit/(:num)', 'UserController::edit/$1');
+    $routes->post('users/update/(:num)', 'UserController::update/$1');
     $routes->get('users/delete/(:num)', 'UserController::delete/$1');
-
-    // Tarif CRUD
-    $routes->get('tarif', 'TarifController::index');
-    $routes->post('tarif/store', 'TarifController::store');
-    $routes->get('tarif/delete/(:num)', 'TarifController::delete/$1');
 });
 
 // E-Retribusi Routes

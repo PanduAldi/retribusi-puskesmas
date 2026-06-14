@@ -25,9 +25,12 @@
                 <td><?= esc($u['username']) ?></td>
                 <td><strong><?= strtoupper($u['role']) ?></strong></td>
                 <td><?= $u['nama_puskesmas'] ?: '<span style="color:#999;">Kabupaten (Global)</span>' ?></td>
-                <td><?= $u['is_active'] ? '<span style="color:green;">Aktif</span>' : '<span style="color:red;">Nonaktif</span>' ?></td>
+                <td><?= $u['is_active'] ? '<span style="color:green; font-weight:700;">Aktif</span>' : '<span style="color:red; font-weight:700;">Nonaktif</span>' ?></td>
                 <td>
-                    <a href="<?= base_url('admin/users/delete/' . $u['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Hapus user ini?')">Hapus</a>
+                    <div style="display:flex; gap: 8px;">
+                        <a href="<?= base_url('admin/users/edit/' . $u['id']) ?>" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="<?= base_url('admin/users/delete/' . $u['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menonaktifkan user ini demi keamanan data?')">Hapus</a>
+                    </div>
                 </td>
             </tr>
             <?php endforeach; ?>

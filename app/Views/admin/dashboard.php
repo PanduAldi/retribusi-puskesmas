@@ -163,48 +163,90 @@
     </div>
 </div>
 
-<!-- ── Tabel Puskesmas ───────────────────────────────────── -->
-<div class="card">
-    <div class="card-header">
-        <h3><i class="fas fa-list-ul" style="margin-right:8px;"></i> Daftar Puskesmas</h3>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width:60px; text-align:center;">#</th>
-                <th>Nama Puskesmas</th>
-                <th>Kode Retribusi</th>
-                <?php if (session()->get('role') === 'admin_kabupaten') : ?>
-                <th style="width:120px; text-align:center;">Aksi</th>
-                <?php endif; ?>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($puskesmas_list as $i => $p) : ?>
-            <tr>
-                <td style="text-align:center; color:#999; font-size:0.85rem;"><?= $i + 1 ?></td>
-                <td>
-                    <div style="font-weight:600; color:#1a237e;">
-                        <i class="fas fa-hospital-alt" style="margin-right:6px; color:#aaa;"></i>
-                        <?= esc($p['prasarana']) ?>
+<!-- ── Top Kategori & Tabel Puskesmas ────────────────────────── -->
+<div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; margin-top: 28px;">
+    <!-- Top 5 Kategori -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h3><i class="fas fa-trophy" style="margin-right:8px; color: #ffc107;"></i> 5 Kategori Terbanyak</h3>
+        </div>
+        <div style="padding-top: 10px;">
+            <?php if (empty($top_kategori)) : ?>
+                <div style="text-align: center; padding: 40px 0; color: #999;">
+                    <i class="fas fa-folder-open" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                    <p>Belum ada data transaksi lunas.</p>
+                </div>
+            <?php else : ?>
+                <?php
+                $max_vol = $top_kategori[0]['total_volume'];
+                foreach ($top_kategori as $tk) :
+                    $percent = ($tk['total_volume'] / $max_vol) * 100;
+                ?>
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 700; color: #1a237e;"><?= esc($tk['kategori'] ?: 'Lain-lain') ?></span>
+                        <span style="color: #666; font-size: 0.85rem;"><strong><?= number_format($tk['total_volume'], 0) ?></strong> layanan</span>
                     </div>
-                </td>
-                <td>
-                    <span style="background:#e8f0fe; color:#1a73e8; padding:3px 10px; border-radius:6px; font-weight:700; font-size:0.85rem; letter-spacing:1px;">
-                        <?= esc($p['kode_retribusi']) ?>
-                    </span>
-                </td>
-                <?php if (session()->get('role') === 'admin_kabupaten') : ?>
-                <td style="text-align:center;">
-                    <a href="<?= base_url('admin/puskesmas/edit/' . $p['id']) ?>" class="btn btn-primary" style="padding:6px 14px; font-size:0.8rem;">
-                        <i class="fas fa-edit"></i> Detail
-                    </a>
-                </td>
-                <?php endif; ?>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+                    <div style="background: #f0f2f5; height: 10px; border-radius: 10px; overflow: hidden;">
+                        <div style="background: var(--primary-color); width: <?= $percent ?>%; height: 100%; border-radius: 10px;"></div>
+                    </div>
+                    <div style="text-align: right; margin-top: 5px; font-size: 0.8rem; color: #198754; font-weight: 600;">
+                        Rp <?= number_format($tk['total_amount'], 0, ',', '.') ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Tabel Puskesmas -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h3><i class="fas fa-list-ul" style="margin-right:8px;"></i> Daftar Puskesmas</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:60px; text-align:center;">#</th>
+                    <th>Nama Puskesmas</th>
+                    <th>Kode</th>
+                    <?php if (session()->get('role') === 'admin_kabupaten') : ?>
+                    <th style="width:100px; text-align:center;">Aksi</th>
+                    <?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($puskesmas_list as $i => $p) : ?>
+                <tr>
+                    <td style="text-align:center; color:#999; font-size:0.85rem;"><?= $i + 1 ?></td>
+                    <td>
+                        <div style="font-weight:600; color:#1a237e; font-size: 0.9rem;">
+                            <?= esc($p['prasarana']) ?>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="background:#e8f0fe; color:#1a73e8; padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.8rem;">
+                            <?= esc($p['kode_retribusi']) ?>
+                        </span>
+                    </td>
+                    <?php if (session()->get('role') === 'admin_kabupaten') : ?>
+                    <td style="text-align:center;">
+                        <a href="<?= base_url('admin/puskesmas/edit/' . $p['id']) ?>" class="btn btn-primary" style="padding:5px 10px; font-size:0.75rem;">
+                            Detail
+                        </a>
+                    </td>
+                    <?php endif; ?>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<style>
+    @media (max-width: 1100px) {
+        div[style*="grid-template-columns: 1fr 1.2fr"] { grid-template-columns: 1fr !important; }
+    }
+</style>
 
 <?= $this->endSection() ?>

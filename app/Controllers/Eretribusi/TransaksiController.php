@@ -5,27 +5,25 @@ namespace App\Controllers\Eretribusi;
 use App\Controllers\BaseController;
 use App\Models\TransaksiRetribusiModel;
 use App\Models\TransaksiItemModel;
-use App\Models\TarifRetribusiModel;
 use App\Models\JenisRetribusiModel;
 use App\Models\PuskesmasModel;
-use CodeIgniter\HTTP\ResponseInterface;
-use Config\Services;
+use App\Models\PuskesmasJenisModel;
 
 class TransaksiController extends BaseController
 {
     protected $transaksiModel;
     protected $itemModel;
-    protected $tarifModel;
     protected $jenisModel;
     protected $puskesmasModel;
+    protected $puskesmasJenisModel;
 
     public function __construct()
     {
         $this->transaksiModel = new TransaksiRetribusiModel();
         $this->itemModel = new TransaksiItemModel();
-        $this->tarifModel = new TarifRetribusiModel();
         $this->jenisModel = new JenisRetribusiModel();
         $this->puskesmasModel = new PuskesmasModel();
+        $this->puskesmasJenisModel = new PuskesmasJenisModel();
     }
 
     /**
@@ -92,14 +90,14 @@ class TransaksiController extends BaseController
             }
         }
 
-        // Load tarif for current puskesmas
-        $tarif = [];
-        if ($idPuskesmas) {
-            $tarif = $this->tarifModel->getTarifByPuskesmas($idPuskesmas);
-        }
+        // Load jenis retribusi for dropdown (as tarif) - Filter by Puskesmas Mapping
+        $allowedJenisIds = $this->puskesmasJenisModel->getJenisIdsByPuskesmas($idPuskesmas);
 
-        // Load jenis retribusi for dropdown
-        $jenis = $this->jenisModel->findAll();
+        if (empty($allowedJenisIds)) {
+            $jenis = [];
+        } else {
+            $jenis = $this->jenisModel->whereIn('id', $allowedJenisIds)->findAll();
+        }
 
         // Load puskesmas data (for admin kabupaten selection)
         $puskesmas = [];
@@ -114,7 +112,7 @@ class TransaksiController extends BaseController
         }
 
         return view('eretribusi/transaksi/create', [
-            'tarif' => $tarif,
+            'tarif' => $jenis,
             'jenis' => $jenis,
             'puskesmas' => $puskesmas,
             'currentPuskesmas' => $currentPuskesmas,
@@ -172,10 +170,14 @@ class TransaksiController extends BaseController
         foreach ($idJenisArr as $key => $idJenis) {
             $volume = (float) $volumeArr[$key];
 
-            // Get tarif for calculation
-            $tarifData = $this->tarifModel->where('id_puskesmas', $idPuskesmas)
-                                         ->where('id_jenis', $idJenis)
-                                         ->first();
+            // Validation: Ensure the service is allowed for this Puskesmas
+            if (!$this->puskesmasJenisModel->isAllowed($idPuskesmas, (int)$idJenis)) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('notif_gagal', 'Terdapat jenis layanan yang tidak diizinkan untuk Puskesmas ini.');
+            }
+
+            // Get tarif for calculation from jenisModel
+            $tarifData = $this->jenisModel->find($idJenis);
 
             $tarifPerUnit = $tarifData ? (float) $tarifData['tarif'] : 0;
             $amount = $volume * $tarifPerUnit;

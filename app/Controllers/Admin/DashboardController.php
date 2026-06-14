@@ -37,11 +37,29 @@ class DashboardController extends BaseController
             $puskesmas_list = $puskesmasModel->findAll();
         }
 
+        // 5 Kategori Terbanyak
+        $db = \Config\Database::connect();
+        $builder = $db->table('transaksi_item');
+        $builder->select('jenis_retribusi.kategori, SUM(transaksi_item.volume) as total_volume, SUM(transaksi_item.amount) as total_amount');
+        $builder->join('jenis_retribusi', 'jenis_retribusi.id = transaksi_item.id_jenis');
+        $builder->join('transaksi_retribusi', 'transaksi_retribusi.id = transaksi_item.id_transaksi');
+
+        if ($role === 'admin_puskesmas') {
+            $builder->where('transaksi_retribusi.id_puskesmas', $idPuskesmas);
+        }
+
+        $builder->where('transaksi_retribusi.status', 1); // Hanya yang sudah lunas
+        $builder->groupBy('jenis_retribusi.kategori');
+        $builder->orderBy('total_volume', 'DESC');
+        $builder->limit(5);
+        $top_kategori = $builder->get()->getResultArray();
+
         $data = [
             'total_puskesmas' => $total_puskesmas,
             'total_transaksi' => $total_transaksi,
             'total_pendapatan' => $total_pendapatan,
             'puskesmas_list' => $puskesmas_list,
+            'top_kategori' => $top_kategori,
         ];
 
         return view('admin/dashboard', $data);
