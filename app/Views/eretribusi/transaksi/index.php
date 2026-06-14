@@ -206,7 +206,7 @@
                                 <?php if ($trx['status'] != 'paid' && $trx['status'] != 'lunas'): ?>
                                     <?php if (!empty($trx['id_billing'])): ?>
                                         <a href="<?= base_url('eretribusi/qris/' . $trx['id_billing']) ?>" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 6px;">
-                                            <i class="fas fa-qrcode"></i> Lihat QRIS
+                                            <i class="fas fa-qrcode"></i> Bayar
                                         </a>
                                     <?php else: ?>
                                         <a href="<?= base_url('eretribusi/konfirmasi/' . $trx['invoice']) ?>" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 6px;">
@@ -338,7 +338,7 @@
             if (trx.id_billing) {
                 payBtn.href = `<?= base_url('eretribusi/qris/') ?>/${trx.id_billing}`;
                 payBtn.className = 'btn btn-success';
-                payBtn.innerHTML = `<i class="fas fa-qrcode"></i> Lihat QRIS / Bayar`;
+                payBtn.innerHTML = `<i class="fas fa-qrcode"></i>Bayar`;
             } else {
                 payBtn.href = `<?= base_url('eretribusi/konfirmasi/') ?>/${trx.invoice}`;
                 payBtn.className = 'btn btn-primary';
