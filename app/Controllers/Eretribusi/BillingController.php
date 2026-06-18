@@ -7,6 +7,7 @@ use App\Models\BillModel;
 use App\Models\PuskesmasModel;
 use App\Models\TransaksiRetribusiModel;
 use App\Services\Billing\BillingService;
+use App\Services\BimaQRService;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class BillingController extends BaseController
@@ -87,8 +88,8 @@ class BillingController extends BaseController
         $billingData = [
             'kode_retribusi' => $puskesmas['kode_retribusi'],
             'nominal'        => $totalNominal,
-            'keterangan'     => $puskesmas['prasarana'],
-            'no_dokumen'     => $transaksi['no_dokumen'], // Gunakan No Rekam Medik
+            'keterangan'     => $transaksi['no_dokumen'] . '-' . $puskesmas['prasarana'],
+            'no_dokumen'     => $transaksi['invoice'],
         ];
 
         $response = $this->billingService->generateIdBilling($billingData);
@@ -181,11 +182,17 @@ class BillingController extends BaseController
         $idPuskesmas = $transaksi['id_puskesmas'];
         $puskesmas   = $this->puskesmasModel->find($idPuskesmas);
 
+        $paymentLink = (new BimaQRService())->getPaymentLinkByIdBilling($idBilling);
+        if (empty($paymentLink)) {
+            return redirect()->back()->with('notif_gagal', 'Gagal membuat link pembayaran QRIS. Silakan coba lagi.');
+        }
+
         return view('eretribusi/qris', [
-            'id_billing' => $idBilling,
-            'transaksi_master'  => $transaksi,
-            'items'      => $items,
-            'puskesmas'  => $puskesmas
+            'id_billing'       => $idBilling,
+            'transaksi_master' => $transaksi,
+            'items'            => $items,
+            'puskesmas'        => $puskesmas,
+            'paymentLink'      => $paymentLink,
         ]);
     }
 }

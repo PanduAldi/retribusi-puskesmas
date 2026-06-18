@@ -61,18 +61,28 @@
             </div>
 
             <div id="qris-container" style="padding: 20px 0;">
-                <div id="qris-placeholder" style="width: 280px; height: 280px; background: #f8f9fa; border: 3px dashed #dee2e6; border-radius: 15px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; color: #adb5bd;">
-                    <i class="fas fa-qrcode fa-5x"></i>
-                    <p style="font-weight: 500;">QRIS belum di-generate</p>
+                <div style="width: 280px; min-height: 220px; background: #f8f9fa; border: 3px dashed #dee2e6; border-radius: 15px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; color: #6c757d; padding: 25px;">
+                    <i class="fas fa-qrcode fa-5x" style="color: #198754;"></i>
+                    <p style="font-weight: 700; color: #1a237e; margin: 0;">Link QRIS siap digunakan</p>
+                    <p style="font-size: 0.85rem; margin: 0; line-height: 1.5;">
+                        Link pembayaran berlaku selama <strong>5 menit</strong> sejak halaman ini dibuka.
+                    </p>
+                    <div id="qris-countdown" style="font-weight: 800; color: #dc3545; font-size: 1.2rem;">05:00</div>
                 </div>
 
-                <button id="btn-generate-qris" class="btn btn-primary" style="margin-top: 25px; padding: 15px 40px; font-size: 1rem; box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);">
-                    <i class="fas fa-sync-alt"></i> GENERATE QRIS SEKARANG
-                </button>
+                <a id="btn-bayar-qris" href="<?= esc($paymentLink, 'attr') ?>" class="btn btn-success" style="margin-top: 25px; padding: 15px 40px; font-size: 1rem; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3); display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-external-link-alt"></i> BAYAR PAKAI QRIS
+                </a>
 
-                <p style="margin-top: 20px; font-size: 0.85rem; color: #6c757d; line-height: 1.6;">
-                    Klik tombol di atas untuk mendapatkan kode QRIS terbaru dari Bank Jateng.<br>
-                    Pastikan koneksi internet stabil.
+                <div style="margin-top: 15px; display: flex; justify-content: center;">
+                    <a href="<?= esc(current_url(), 'attr') ?>" class="btn btn-outline-secondary" style="padding: 8px 18px; font-size: 0.85rem;">
+                        <i class="fas fa-sync-alt"></i> Refresh Link QRIS
+                    </a>
+                </div>
+
+                <p id="qris-expired-note" style="margin-top: 20px; font-size: 0.85rem; color: #6c757d; line-height: 1.6;">
+                    Klik tombol di atas untuk membuka halaman pembayaran QRIS Bank Jateng.<br>
+                    Jika waktu habis, klik Refresh Link QRIS untuk membuat link baru.
                 </p>
             </div>
         </div>
@@ -84,7 +94,7 @@
 @media print {
     /* Hide everything except structural content */
     body * { visibility: hidden; background: #fff !important; }
-    .sidebar, .navbar, .btn, .card-header, #btn-generate-qris { display: none !important; }
+    .sidebar, .navbar, .btn, .card-header, #btn-bayar-qris { display: none !important; }
 
     .main-content, .content-body { margin: 0 !important; padding: 0 !important; }
 
@@ -166,27 +176,32 @@
 </div>
 
 <script>
-document.getElementById('btn-generate-qris').addEventListener('click', function() {
-    const btn = this;
-    const placeholder = document.getElementById('qris-placeholder');
+(function() {
+    let remainingSeconds = 5 * 60;
+    const countdown = document.getElementById('qris-countdown');
+    const payButton = document.getElementById('btn-bayar-qris');
+    const expiredNote = document.getElementById('qris-expired-note');
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GENERATING...';
+    const timer = setInterval(function() {
+        remainingSeconds--;
 
-    // Simulasi hit ke API Bank Jateng untuk mendapatkan QRIS
-    setTimeout(function() {
-        placeholder.style.border = 'none';
-        placeholder.style.background = '#fff';
-        placeholder.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=IDBILLING:<?= $id_billing ?>|TOTAL:<?= array_sum(array_column($items, 'amount')) ?>" alt="QRIS" style="width: 100%; height: 100%; object-fit: contain;">';
+        const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+        const seconds = String(remainingSeconds % 60).padStart(2, '0');
+        countdown.textContent = minutes + ':' + seconds;
 
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-outline-secondary');
-        btn.innerHTML = '<i class="fas fa-check"></i> QRIS TERGENERASI';
-
-        // Update di print area juga
-        document.getElementById('qris-placeholder-print').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IDBILLING:<?= $id_billing ?>|TOTAL:<?= array_sum(array_column($items, 'amount')) ?>" style="width: 100%; height: 100%;">';
-    }, 1500);
-});
+        if (remainingSeconds <= 0) {
+            clearInterval(timer);
+            countdown.textContent = 'KADALUARSA';
+            payButton.classList.remove('btn-success');
+            payButton.classList.add('btn-secondary');
+            payButton.setAttribute('aria-disabled', 'true');
+            payButton.addEventListener('click', function(event) {
+                event.preventDefault();
+            });
+            expiredNote.innerHTML = 'Link QRIS sudah kadaluarsa. Klik <strong>Refresh Link QRIS</strong> untuk membuat link baru.';
+        }
+    }, 1000);
+})();
 </script>
 
 <?= $this->endSection() ?>
