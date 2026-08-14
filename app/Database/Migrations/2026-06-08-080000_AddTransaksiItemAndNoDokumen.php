@@ -8,7 +8,7 @@ class AddTransaksiItemAndNoDokumen extends Migration
 {
     public function up()
     {
-        // 1. Tambah kolom no_dokumen ke transaksi_retribusi
+        // 1. Tambah kolom no_dokumen ke transaksi_retribusi jika belum ada
         if (!$this->db->fieldExists('no_dokumen', 'transaksi_retribusi')) {
             $fields = [
                 'no_dokumen' => [

@@ -10,6 +10,18 @@ $routes->get('login', 'Auth\AuthController::login');
 $routes->post('login', 'Auth\AuthController::attemptLogin');
 $routes->get('logout', 'Auth\AuthController::logout');
 
+// H2H Routes - Host to Host dengan Bank Jateng
+$routes->group('h2h', ['namespace' => 'App\Controllers\H2h'], function($routes) {
+    $routes->get('auth', 'H2hController::auth');
+    $routes->post('inquiry', 'H2hController::inquiry');
+    $routes->post('payment', 'H2hController::payment');
+});
+
+// Simulator & Testing H2H
+$routes->group('eretribusi/h2h-test', ['namespace' => 'App\Controllers\H2h', 'filter' => 'auth'], function($routes) {
+    $routes->get('', 'H2hTestController::index');
+});
+
 // Admin Kabupaten Routes
 $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'auth:admin_kabupaten,admin_puskesmas'], function($routes) {
     $routes->get('dashboard', 'DashboardController::index');
@@ -43,6 +55,9 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
 
 // E-Retribusi Routes
 $routes->group('eretribusi', ['namespace' => 'App\Controllers\Eretribusi', 'filter' => 'auth'], function($routes) {
+    // Pasien Auto-fill API
+    $routes->get('pasien/cari/(:any)', 'PasienApiController::getPasien/$1');
+
     // Billing routes
     $routes->get('konfirmasi/(:segment)', 'BillingController::konfirmasi/$1');
     $routes->post('generate', 'BillingController::generate');

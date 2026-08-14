@@ -143,9 +143,12 @@ class TransaksiController extends BaseController
         // Validation
         $validation =  \Config\Services::validation();
         $validation->setRules([
-            'no_dokumen' => 'required',
-            'id_jenis.*' => 'required|numeric',
-            'volume.*' => 'required|numeric|greater_than[0]',
+            'no_dokumen'    => 'required',
+            'nama_pasien'   => 'required',
+            'jenis_kelamin' => 'required',
+            'tgl_lahir'     => 'required|valid_date',
+            'id_jenis.*'    => 'required|numeric',
+            'volume.*'      => 'required|numeric|greater_than[0]',
         ]);
 
         if (!$this->validate($validation->getRules())) {
@@ -157,20 +160,28 @@ class TransaksiController extends BaseController
             ? session()->get('id_puskesmas')
             : $this->request->getPost('id_puskesmas');
 
-        $noDokumen = $this->request->getPost('no_dokumen');
-        $idJenisArr = $this->request->getPost('id_jenis');
-        $volumeArr = $this->request->getPost('volume');
+        $noDokumen    = $this->request->getPost('no_dokumen');
+        $namaPasien   = $this->request->getPost('nama_pasien');
+        $alamatPasien = $this->request->getPost('alamat_pasien');
+        $jenisKelamin = $this->request->getPost('jenis_kelamin');
+        $tglLahir     = $this->request->getPost('tgl_lahir');
+        $idJenisArr   = $this->request->getPost('id_jenis');
+        $volumeArr    = $this->request->getPost('volume');
 
         // Generate unique invoice number
         $invoice = $this->generateInvoiceNumber($idPuskesmas);
 
         // Prepare data for insertion
         $dataTransaksi = [
-            'id_puskesmas' => $idPuskesmas,
-            'no_dokumen'   => $noDokumen,
-            'invoice'      => $invoice,
-            'invoice_date' => date('Y-m-d'),
-            'status'       => 'pending'
+            'id_puskesmas'  => $idPuskesmas,
+            'no_dokumen'    => $noDokumen,
+            'nama_pasien'   => $namaPasien,
+            'alamat_pasien' => $alamatPasien,
+            'jenis_kelamin' => $jenisKelamin,
+            'tgl_lahir'     => $tglLahir,
+            'invoice'       => $invoice,
+            'invoice_date'  => date('Y-m-d'),
+            'status'        => 'pending'
         ];
 
         // Save to database

@@ -1,0 +1,216 @@
+{
+  "info": {
+    "name": "H2H Bank Jateng - Retribusi Puskesmas",
+    "description": "Koleksi API untuk integrasi Host-to-Host (H2H) antara aplikasi Retribusi Puskesmas dengan Bank Jateng.\n\nEndpoint tersedia di:\n- Production: https://retribusi-puskesmas.aplikasi-anda.go.id\n- Development: http://localhost:8080\n\nDokumentasi lengkap: docs/PROSES_BISNIS_TAGIHAN_PEMBAYARAN.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "18026072"
+  },
+  "item": [
+    {
+      "name": "1. Auth (GET /h2h/auth)",
+      "description": "Endpoint autentikasi untuk mendapatkan x-api-key (token).\n\nAlur:\n1. Kirim Authorization: Basic base64(kredensial)\n2. Server akan generate dan mengembalikan x-api-key\n3. Token berlaku 1 jam, digunakan pada header x-api-key untuk Inquiry & Payment",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Basic {{base64}}",
+            "type": "text",
+            "description": "Basic Auth: username:password → encode base64"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/h2h/auth",
+          "host": ["{{base_url}}"],
+          "path": ["h2h", "auth"]
+        }
+      },
+      "response": [
+        {
+          "code": 200,
+          "body": {
+            "x-api-key": "{{x-api-key}}",
+            "resp_code": "00",
+            "resp_desc": "Success"
+          }
+        }
+      ],
+      "auth": {
+        "type": "basic",
+        "basic": [
+          { "key": "username", "value": "bankjateng" },
+          { "key": "password", "value": "puskesmas123" }
+        ]
+      }
+    },
+    {
+      "name": "2. Inquiry (POST /h2h/inquiry)",
+      "description": "Endpoint untuk mengecek tagihan pasien berdasarkan No. RM.\n\nAlur:\n1. Gunakan x-api-key dari response Auth (di header)\n2. Kirim No. RM pasien\n3. Server mengembalikan data pasien & rincian tagihan (max 7 item)\n\nData yang dikembalikan:\n- nama_pasien\n- alamat_pasien\n- jenis_kelamin\n- tgl_lahir\n- usia\n- total_tagihan\n- tagihan[] (masing-masing item dengan no_kwitansi & nominal_tagihan)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text",
+            "description": "Token dari response Auth"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"no_rm\": \"2304002648\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/h2h/inquiry",
+          "host": ["{{base_url}}"],
+          "path": ["h2h", "inquiry"]
+        }
+      },
+      "response": [
+        {
+          "code": 200,
+          "body": {
+            "resp_code": "00",
+            "resp_desc": "data ditemukan",
+            "no_rm": "2304002648",
+            "kode_puskesmas": "330600101Z",
+            "nama_pasien": "MUHAMMAD ARIF WICAKSONO",
+            "alamat_pasien": "Jl. Pahlawan No. 123, Purworejo",
+            "jenis_kelamin": "LAKI-LAKI",
+            "usia": "32",
+            "tgl_lahir": "1994-10-10",
+            "total_tagihan": "270000",
+            "tagihan": [
+              {
+                "no_kwitansi": "S000000001",
+                "nominal_tagihan": "150000",
+                "Keterangan": "Pemeriksaan Umum (RET-3306001-260814-99887)"
+              },
+              {
+                "no_kwitansi": "S000000002",
+                "nominal_tagihan": "120000",
+                "Keterangan": "Pemeriksaan Gigi (RET-3306001-260814-99887)"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Payment (POST /h2h/payment)",
+      "description": "Endpoint pelunasan / posting transaksi.\n\nAlur:\n1. Kirim x-api-key (header)\n2. Kirim no_rm, total_tagihan, & noreff (nomor referensi Bank)\n3. Validasi idempotency (jika noreff sudah diproses, tidak duplikat)\n4. Status → PAID, timestamp updated_at, noreff_bank\n5. Kembalikan no_reff (RV-{id})",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"no_rm\": \"2304002648\",\n  \"total_tagihan\": \"270000\",\n  \"noreff\": \"BANKJATENG-20260814-001\",\n  \"channel\": \"mobile_banking\",\n  \"device\": \"ANDROID\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/h2h/payment",
+          "host": ["{{base_url}}"],
+          "path": ["h2h", "payment"]
+        }
+      },
+      "response": [
+        {
+          "code": 200,
+          "body": {
+            "resp_code": "00",
+            "resp_desc": "Success",
+            "no_reff": "RV-2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Simulator H2H (GET /eretribusi/h2h-test)",
+      "description": "Halaman simulasi / test internal untuk memverifikasi seluruh alur H2H sebelum produksi.\n\nDigunakan oleh:\n- Admin Kabupaten / Developer\n- Untuk tes end-to-end tanpa melibatkan Bank Jateng\n- Data dummy sudah disediakan via seeder",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Basic {{base64}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/eretribusi/h2h-test",
+          "host": ["{{base_url}}"],
+          "path": ["eretribusi", "h2h-test"]
+        }
+      }
+    },
+    {
+      "name": "5. Auto-fill Pasien (GET /eretribusi/pasien/cari/{no_rm})",
+      "description": "API internal untuk auto-fill data pasien saat kasir mengetik No. RM.\n\nDigunakan di:\n- Form /eretribusi/transaksi/new\n- Ketika No. RM di-blur, otomatis mengisi nama, alamat, jenis_kelamin, tgl_lahir",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/eretribusi/pasien/cari/2304002648",
+          "host": ["{{base_url}}"],
+          "path": ["eretribusi", "pasien", "cari", "2304002648"]
+        }
+      },
+      "response": [
+        {
+          "code": 200,
+          "body": {
+            "status": "success",
+            "nama_pasien": "MUHAMMAD ARIF WICAKSONO",
+            "alamat_pasien": "Jl. Pahlawan No. 123, Purworejo",
+            "jenis_kelamin": "LAKI-LAKI",
+            "tgl_lahir": "1994-10-10"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "base64",
+      "value": "YmFua2phdGVuZzpwdXNrZXNtYXMxMjM=",
+      "type": "string",
+      "description": "Base64 dari 'bankjateng:puskesmas123'"
+    },
+    {
+      "key": "x-api-key",
+      "value": "{{x-api-key}}",
+      "type": "string",
+      "description": "Token dari response Auth, perlu diset secara manual via test script atau ambil dari response"
+    }
+  ]
+}

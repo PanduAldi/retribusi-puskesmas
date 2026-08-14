@@ -187,7 +187,7 @@
                         <i class="fas fa-user-injured"></i> Informasi Pasien & Lokasi
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div class="form-group">
                             <label>Puskesmas Melayani</label>
                             <div style="padding: 12px 15px; background: #f8f9ff; border-radius: 8px; border: 1px solid #e0e4f0; color: #1a237e; font-weight: 700;">
@@ -196,8 +196,38 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="no_dokumen">Nomor Rekam Medik (SIMPUS)</label>
-                            <input type="text" id="no_dokumen" name="no_dokumen" value="<?= old('no_dokumen') ?>" required placeholder="Contoh: 12.34.56" class="form-control" style="border-color: var(--primary-color); font-weight: 700;">
+                            <label for="no_dokumen">Nomor Rekam Medik (SIMPUS) <span style="color:red;">*</span></label>
+                            <input type="text" id="no_dokumen" name="no_dokumen" value="<?= old('no_dokumen') ?>" required placeholder="Contoh: 2304002648" class="form-control" style="border-color: var(--primary-color); font-weight: 700;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label for="no_kwitansi">Nomor Kwitansi / Billing <span style="color:gray; font-size:0.8rem;">(Opsional / Auto-Generated)</span></label>
+                            <input type="text" id="no_kwitansi" name="no_kwitansi" value="<?= old('no_kwitansi') ?>" placeholder="Kosongkan untuk generate otomatis (S00...)" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="nama_pasien">Nama Lengkap Pasien <span style="color:red;">*</span></label>
+                            <input type="text" id="nama_pasien" name="nama_pasien" value="<?= old('nama_pasien') ?>" required placeholder="Sesuai KTP / SIMPUS" class="form-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="jenis_kelamin">Jenis Kelamin <span style="color:red;">*</span></label>
+                            <select id="jenis_kelamin" name="jenis_kelamin" required class="form-control" style="height: 46px;">
+                                <option value="">-- Pilih --</option>
+                                <option value="LAKI-LAKI" <?= old('jenis_kelamin') == 'LAKI-LAKI' ? 'selected' : '' ?>>LAKI-LAKI</option>
+                                <option value="PEREMPUAN" <?= old('jenis_kelamin') == 'PEREMPUAN' ? 'selected' : '' ?>>PEREMPUAN</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tgl_lahir">Tanggal Lahir <span style="color:red;">*</span></label>
+                            <input type="date" id="tgl_lahir" name="tgl_lahir" value="<?= old('tgl_lahir') ?>" required class="form-control" style="height: 46px; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 8px; width: 100%;">
+                        </div>
+                        <div class="form-group">
+                            <label for="alamat_pasien">Alamat Pasien</label>
+                            <input type="text" id="alamat_pasien" name="alamat_pasien" value="<?= old('alamat_pasien') ?>" placeholder="Kelurahan / Kecamatan" class="form-control">
                         </div>
                     </div>
                 </div>
@@ -296,6 +326,32 @@
     <script>
     $(document).ready(function() {
         initSelect2();
+
+        // Auto-fill pasien saat No. RM diketik atau di-blur
+        $('#no_dokumen').on('blur', function() {
+            var noRm = $(this).val().trim();
+            if (noRm.length > 0) {
+                $.ajax({
+                    url: '<?= base_url('eretribusi/pasien/cari/') ?>' + noRm,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#nama_pasien').val(response.nama_pasien);
+                            $('#alamat_pasien').val(response.alamat_pasien);
+                            $('#jenis_kelamin').val(response.jenis_kelamin);
+                            $('#tgl_lahir').val(response.tgl_lahir);
+                            
+                            // Visual feedback (flash input border green)
+                            $('#no_dokumen').css('border-color', '#28a745');
+                            setTimeout(() => {
+                                $('#no_dokumen').css('border-color', 'var(--primary-color)');
+                            }, 1500);
+                        }
+                    }
+                });
+            }
+        });
     });
 
     function initSelect2() {
