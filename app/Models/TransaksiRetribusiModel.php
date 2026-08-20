@@ -10,11 +10,8 @@ class TransaksiRetribusiModel extends Model
     protected $primaryKey = 'id';
     protected $allowedFields = [
         'id_puskesmas',
+        'id_pasien',
         'no_dokumen',
-        'nama_pasien',
-        'alamat_pasien',
-        'jenis_kelamin',
-        'tgl_lahir',
         'invoice',
         'invoice_date',
         'status',

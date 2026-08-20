@@ -7,10 +7,16 @@ use App\Controllers\BaseController;
 class H2hController extends BaseController
 {
     protected $db;
+    protected $transaksiModel;
+    protected $itemModel;
+    protected $pasienModel;
 
     public function __construct()
     {
         $this->db = \Config\Database::connect();
+        $this->transaksiModel = new \App\Models\TransaksiRetribusiModel();
+        $this->itemModel = new \App\Models\TransaksiItemModel();
+        $this->pasienModel = new \App\Models\PasienModel();
     }
 
     protected function logRequest(string $endpoint, ?string $requestData, ?string $responseData)
@@ -24,9 +30,6 @@ class H2hController extends BaseController
         ]);
     }
 
-    /**
-     * 1. Authorization Endpoint (GET /h2h/auth)
-     */
     public function auth()
     {
         $authHeader = $this->request->getHeaderLine('Authorization');
@@ -91,9 +94,6 @@ class H2hController extends BaseController
         return !empty($tokenData);
     }
 
-    /**
-     * 2. Inquiry Endpoint (POST /h2h/inquiry)
-     */
     public function inquiry()
     {
         $rawBody = $this->request->getBody();
@@ -107,40 +107,40 @@ class H2hController extends BaseController
 
         $noRm = $input['no_rm'] ?? null;
 
-        // Validasi no_rm wajib numerik sesuai spesifikasi Bank Jateng agar bisa dibayar via ATM
         if (empty($noRm) || !preg_match('/^[0-9]+$/', (string)$noRm)) {
             $res = ['resp_code' => '01', 'resp_desc' => 'Payment Number Not Exist'];
             $this->logRequest('INQUIRY', $rawBody, json_encode($res));
             return $this->response->setJSON($res);
         }
 
-        // Cari transaksi berdasarkan no_dokumen (no_rm) yang statusnya belum lunas ('pending' atau '0')
-        $transaksi = $this->db->table('transaksi_retribusi')
+        // Cari transaksi outstanding
+        $transaksiList = $this->db->table('transaksi_retribusi')
             ->where('no_dokumen', $noRm)
             ->where('status', 'pending')
             ->get()
             ->getResultArray();
 
-        if (empty($transaksi)) {
-            // Coba cek dengan status '0' (jika ada data lama)
-            $transaksi = $this->db->table('transaksi_retribusi')
+        if (empty($transaksiList)) {
+            $transaksiList = $this->db->table('transaksi_retribusi')
                 ->where('no_dokumen', $noRm)
                 ->where('status', 0)
                 ->get()
                 ->getResultArray();
         }
 
-        if (empty($transaksi)) {
+        if (empty($transaksiList)) {
             $res = ['resp_code' => '01', 'resp_desc' => 'Payment Number Not Exist'];
             $this->logRequest('INQUIRY', $rawBody, json_encode($res));
             return $this->response->setJSON($res);
         }
 
-        $master = $transaksi[0];
-        $puskesmas = $this->db->table('puskesmas')->where('id', $master['id_puskesmas'])->get()->getRowArray();
+        $master = $transaksiList[0];
 
-        // Ambil item tagihan dari tabel transaksi_item dengan join ke jenis_retribusi untuk mendapatkan nama layanan
-        $transaksiIds = array_column($transaksi, 'id');
+        // Ambil data pasien dari tabel terpisah
+        $pasien = $this->pasienModel->find($master['id_pasien']);
+
+        // Ambil item tagihan
+        $transaksiIds = array_column($transaksiList, 'id');
         $items = $this->db->table('transaksi_item')
             ->select('transaksi_item.*, jenis_retribusi.jenis as nama_layanan')
             ->join('jenis_retribusi', 'jenis_retribusi.id = transaksi_item.id_jenis', 'left')
@@ -161,24 +161,20 @@ class H2hController extends BaseController
             $amount = (int)$item['amount'];
             $totalTagihan += $amount;
 
-            // Format no_kwitansi sesuai standar Bank Jateng (S + 9 digit)
             $noKwitansi = 'S' . str_pad($item['id'], 9, '0', STR_PAD_LEFT);
             $namaLayanan = $item['nama_layanan'] ?? 'Retribusi Layanan Kesehatan';
 
             $tagihanList[] = [
                 'no_kwitansi'     => $noKwitansi,
                 'nominal_tagihan' => (string)$amount,
-                'Keterangan'      => $namaLayanan . ' (' . ($master['invoice'] ?? 'INV') . ')'
+                'Keterangan'      => $namaLayanan . ' (' . $noKwitansi . ')'
             ];
         }
 
-        // Kode Puskesmas mengikuti data master puskesmas (kode_retribusi) atau default daerah
-        $kodePuskesmas = !empty($puskesmas['kode_retribusi']) ? $puskesmas['kode_retribusi'] : '330600101Z';
-
-        // Usia dihitung otomatis dari tanggal lahir (jika tersedia)
+        $kodePuskesmas = $master['kode_puskesmas'] ?? '330600101Z';
         $usia = null;
-        if (!empty($master['tgl_lahir']) && $master['tgl_lahir'] !== '0000-00-00') {
-            $usia = (string)(date('Y') - (int)substr($master['tgl_lahir'], 0, 4));
+        if (!empty($pasien['tgl_lahir']) && $pasien['tgl_lahir'] !== '0000-00-00') {
+            $usia = (string)(date('Y') - (int)substr($pasien['tgl_lahir'], 0, 4));
         }
 
         $res = [
@@ -186,11 +182,11 @@ class H2hController extends BaseController
             'resp_desc'      => 'data ditemukan',
             'no_rm'          => (string)$noRm,
             'kode_puskesmas' => $kodePuskesmas,
-            'nama_pasien'    => $master['nama_pasien'] ?? 'PASIEN ' . $noRm,
-            'alamat_pasien'  => $master['alamat_pasien'] ?? '-',
-            'jenis_kelamin'  => $master['jenis_kelamin'] ?? '-',
+            'nama_pasien'    => $pasien['nama_pasien'] ?? '',
+            'alamat_pasien'  => $pasien['alamat_pasien'] ?? '',
+            'jenis_kelamin'  => $pasien['jenis_kelamin'] ?? '',
             'usia'           => $usia ?? '',
-            'tgl_lahir'      => $master['tgl_lahir'] ?? '',
+            'tgl_lahir'      => $pasien['tgl_lahir'] ?? '',
             'total_tagihan'  => (string)$totalTagihan,
             'tagihan'        => $tagihanList
         ];
@@ -199,9 +195,6 @@ class H2hController extends BaseController
         return $this->response->setJSON($res);
     }
 
-    /**
-     * 3. Payment / Posting Endpoint (POST /h2h/payment)
-     */
     public function payment()
     {
         $rawBody = $this->request->getBody();
@@ -223,7 +216,6 @@ class H2hController extends BaseController
             return $this->response->setJSON($res);
         }
 
-        // Idempotency check: Cek apakah noreff bank sudah pernah diproses
         $existingPayment = $this->db->table('transaksi_retribusi')
             ->where('noreff_bank', $noreff)
             ->get()
@@ -239,7 +231,6 @@ class H2hController extends BaseController
             return $this->response->setJSON($res);
         }
 
-        // Cari transaksi outstanding
         $transaksiList = $this->db->table('transaksi_retribusi')
             ->where('no_dokumen', $noRm)
             ->where('status', 'pending')
@@ -273,7 +264,6 @@ class H2hController extends BaseController
             return $this->response->setJSON($res);
         }
 
-        // Atomically update status to lunas
         $this->db->transStart();
 
         $this->db->table('transaksi_retribusi')
