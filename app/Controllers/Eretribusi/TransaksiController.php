@@ -34,49 +34,47 @@ class TransaksiController extends BaseController
      */
     public function index()
     {
-        // Tenant Isolation
+        // Tenant Isolation: Admin Puskesmas hanya melihat unitnya sendiri
         if (session()->get('role') !== 'admin_kabupaten') {
             $idPuskesmas = session()->get('id_puskesmas');
         } else {
-            $idPuskesmas = null;
+            $idPuskesmas = $this->request->getGet('id_puskesmas');
         }
 
         $query = $this->transaksiModel
-            ->select('transaksi_retribusi.*, puskesmas.prasarana, pasien.nama_pasien, pasien.no_rm')
-            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left')
+            ->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm')
             ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left');
 
         if ($idPuskesmas) {
-            $query->where('transaksi_retribusi.id_puskesmas', $idPuskesmas);
+            $query->where('id_puskesmas', $idPuskesmas);
         }
 
-        $transaksiRaw = $query->orderBy('transaksi_retribusi.invoice_date', 'DESC')
-            ->findAll();
+        $transaksiRaw = $query->orderBy('invoice_date', 'DESC')->findAll();
 
         $totalTerbayar = 0;
         $totalBelumTerbayar = 0;
         $totalTransaksi = count($transaksiRaw);
 
         $transaksi = [];
-        foreach ($transaksiRaw as $trx) {
-            $items = $this->itemModel->getItemsByTransaksi($trx['id']);
+        foreach ($transaksiRaw as $row) {
+            $items = $this->itemModel->getItemsByTransaksi($row['id']);
 
-            $currentAmount = 0;
+            $totalAmount = 0;
             $itemNames = [];
             foreach ($items as $item) {
-                $currentAmount += $item['amount'];
+                $totalAmount += $item['amount'];
                 $itemNames[] = $item['jenis'];
             }
-            $trx['items_detail'] = $items;
-            $trx['jenis'] = implode(', ', $itemNames);
-            $trx['amount'] = $currentAmount;
-            $trx['volume'] = count($items);
-            $transaksi[] = $trx;
+            $row['items_detail'] = $items;
+            $row['jenis'] = implode(', ', $itemNames);
+            $row['amount'] = $totalAmount;
+            $row['volume'] = count($items);
+            $transaksi[] = $row;
 
-            if ($trx['status'] == 'paid') {
-                $totalTerbayar += $currentAmount;
+            if ($row['status'] == 'paid') {
+                $totalTerbayar += $totalAmount;
             } else {
-                $totalBelumTerbayar += $currentAmount;
+                $totalBelumTerbayar += $totalAmount;
             }
         }
 
@@ -93,6 +91,7 @@ class TransaksiController extends BaseController
      */
     public function create()
     {
+        // Tenant Isolation: Admin Puskesmas hanya melihat unitnya sendiri
         if (session()->get('role') !== 'admin_kabupaten') {
             $idPuskesmas = session()->get('id_puskesmas');
         } else {
@@ -102,14 +101,21 @@ class TransaksiController extends BaseController
             }
         }
 
+        // Load jenis retribusi for dropdown (as tarif) - Filter by Puskesmas Mapping
         $allowedJenisIds = $this->puskesmasJenisModel->getJenisIdsByPuskesmas($idPuskesmas);
-        $jenis = empty($allowedJenisIds) ? [] : $this->jenisModel->whereIn('id', $allowedJenisIds)->findAll();
+        if (empty($allowedJenisIds)) {
+            $jenis = [];
+        } else {
+            $jenis = $this->jenisModel->whereIn('id', $allowedJenisIds)->findAll();
+        }
 
+        // Load puskesmas data (for admin kabupaten selection)
         $puskesmas = [];
         if (session()->get('role') === 'admin_kabupaten') {
             $puskesmas = $this->puskesmasModel->findAll();
         }
 
+        // Load current puskesmas data for display
         $currentPuskesmas = null;
         if ($idPuskesmas && session()->get('role') !== 'admin_kabupaten') {
             $currentPuskesmas = $this->puskesmasModel->find($idPuskesmas);
@@ -125,10 +131,13 @@ class TransaksiController extends BaseController
     }
 
     /**
-     * Save transaction + pasien to DB
+     * Save transaction to DB
+     * Generate unique invoice number
+     * Handle amount = 0 rule
      */
     public function store()
     {
+        // Validation
         $validation = \Config\Services::validation();
         $validation->setRules([
             'no_dokumen'    => 'required',
@@ -143,6 +152,7 @@ class TransaksiController extends BaseController
             return redirect()->back()->withInput()->with('errors', $validation->getErrors());
         }
 
+        // Get input data
         $idPuskesmas = session()->get('role') !== 'admin_kabupaten'
             ? session()->get('id_puskesmas')
             : $this->request->getPost('id_puskesmas');
@@ -166,28 +176,33 @@ class TransaksiController extends BaseController
             'tgl_lahir'     => $tglLahir,
         ]);
 
-        // Simpan transaksi
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        $idTransaksi = $this->transaksiModel->insert([
+        // Prepare data for insertion
+        $dataTransaksi = [
             'id_puskesmas'  => $idPuskesmas,
             'id_pasien'     => $idPasien,
             'no_dokumen'    => $noDokumen,
             'invoice'       => $invoice,
             'invoice_date'  => date('Y-m-d'),
             'status'        => 'pending'
-        ]);
+        ];
+
+        // Save to database
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $idTransaksi = $this->transaksiModel->insert($dataTransaksi);
 
         $totalAmount = 0;
         foreach ($idJenisArr as $key => $idJenis) {
             $volume = (float) $volumeArr[$key];
 
+            // Validation: Ensure the service is allowed for this Puskesmas
             if (!$this->puskesmasJenisModel->isAllowed($idPuskesmas, (int)$idJenis)) {
                 $db->transRollback();
                 return redirect()->back()->withInput()->with('notif_gagal', 'Terdapat jenis layanan yang tidak diizinkan untuk Puskesmas ini.');
             }
 
+            // Get tarif for calculation from jenisModel
             $tarifData = $this->jenisModel->find($idJenis);
             $tarifPerUnit = $tarifData ? (float) $tarifData['tarif'] : 0;
             $amount = $volume * $tarifPerUnit;
@@ -211,6 +226,7 @@ class TransaksiController extends BaseController
             ? 'Transaksi berhasil disimpan dengan nilai nol. Silahkan lakukan pengecekan tarif.'
             : 'Transaksi berhasil disimpan.';
 
+        // Redirect ke halaman konfirmasi pembayaran
         return redirect()->to('/eretribusi/konfirmasi/' . $invoice)->with('notif_sukses', $message);
     }
 
@@ -219,14 +235,14 @@ class TransaksiController extends BaseController
      */
     public function laporan()
     {
+        // Tenant Isolation: Admin Puskesmas hanya melihat unitnya sendiri
         if (session()->get('role') !== 'admin_kabupaten') {
             $idPuskesmas = session()->get('id_puskesmas');
         } else {
             $idPuskesmas = $this->request->getGet('id_puskesmas');
         }
 
-        $query = $this->transaksiModel
-            ->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm')
+        $query = $this->transaksiModel->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm')
             ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left');
 
         if ($idPuskesmas) {
@@ -261,13 +277,20 @@ class TransaksiController extends BaseController
      */
     private function generateInvoiceNumber(int $idPuskesmas): string
     {
+        // Get puskesmas code
         $puskesmas = $this->puskesmasModel->find($idPuskesmas);
         $kodePuskesmas = $puskesmas ? $puskesmas['kode_retribusi'] : '000';
 
+        // Date part: YYMMDD
         $datePart = date('ymd');
+
+        // Generate random 5-digit number
         $randomPart = mt_rand(10000, 99999);
+
+        // Base invoice format
         $invoice = "RET-{$kodePuskesmas}-{$datePart}-{$randomPart}";
 
+        // Ensure uniqueness
         while ($this->transaksiModel->isInvoiceExists($invoice)) {
             $randomPart = mt_rand(10000, 99999);
             $invoice = "RET-{$kodePuskesmas}-{$datePart}-{$randomPart}";
