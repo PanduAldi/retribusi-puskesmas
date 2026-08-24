@@ -394,7 +394,7 @@ class H2hController extends BaseController
         $res = [
             'resp_code' => self::RESP_SUCCESS,
             'resp_desc' => 'Success',
-            'no_reff'   => 'RV-' . $transaksiList[0]['id']
+            'no_reff'   => $noreff
         ];
 
         $this->logRequest('PAYMENT', $rawBody, json_encode($res));
