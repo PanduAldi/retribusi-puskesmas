@@ -425,11 +425,11 @@ class H2hController extends BaseController
                 }
 
                 // --- Response sukses ---
-                $res = [
-                    'resp_code' => self::RESP_SUCCESS,
-                    'resp_desc' => 'Success',
-                    'no_reff'   => $noreff
-                ];
+                        $res = [
+                            'resp_code' => self::RESP_SUCCESS,
+                            'resp_desc' => 'Success',
+                            'no_reff'   => $noreff
+                        ];
 
         $this->logRequest('PAYMENT', $rawBody, json_encode($res));
         return $this->response->setJSON($res);
