@@ -12,5 +12,6 @@ class DatabaseSeeder extends Seeder
         $this->call('JenisRetribusiSeeder');
         $this->call('BrebesTarifSeeder');
         $this->call('UserSeeder');
+        $this->call('H2hDummySeeder');
     }
 }
