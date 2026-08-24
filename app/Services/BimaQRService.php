@@ -9,6 +9,10 @@ class BimaQRService
     protected string $password;
     protected string $key;
 
+    // Token cache (di simpan dulu, expire setelah 5 menit)
+    protected ?string $cachedToken = null;
+    protected ?string $cachedAt = null;
+
     public function __construct()
     {
         $this->baseUrl  = rtrim((string) env('BIMA_QR_URL', ''), '/');
@@ -17,21 +21,42 @@ class BimaQRService
         $this->key      = (string) env('BIMA_QR_KEY', '');
     }
 
-    public function getPaymentLinkByIdBilling(string $idBilling): ?string
+    /**
+     * Generate QRIS payment link using No. RM
+     * Format idBilling = "77" + no_rm
+     * Token expires within 5 minutes (per dokumen BIMAQR)
+     */
+    public function getQrisLinkByNoRm(string $noRm): ?string
     {
-        $token = $this->getToken($idBilling);
-
+        $idBilling = "77" . $noRm;
+        $token = $this->getNewToken($idBilling);
         if (empty($token)) {
+            log_message('error', 'BIMAQR: Failed to get token for no_rm={no_rm}', ['no_rm' => $noRm]);
             return null;
         }
-
         return $this->getPaymentLink($token);
     }
 
-    public function getToken(string $idBilling): ?string
+    /**
+     * Backward compatibility: get payment link by id_billing (legacy)
+     */
+    public function getPaymentLinkByIdBilling(string $idBilling): ?string
+    {
+        $token = $this->getNewToken($idBilling);
+        if (empty($token)) {
+            return null;
+        }
+        return $this->getPaymentLink($token);
+    }
+
+    /**
+     * Get NEW token from BIMAQR
+     * Token valid 5 minutes, so always request fresh token
+     */
+    protected function getNewToken(string $idBilling): ?string
     {
         $response = $this->postJson('/getToken', [
-            'idBilling' => "73" . $idBilling,
+            'idBilling' => $idBilling,
             'key'       => $this->key,
         ]);
 
@@ -40,11 +65,18 @@ class BimaQRService
                 'id'   => $idBilling,
                 'code' => $response['errCode'] ?? 'NO_RESPONSE',
             ]);
-
             return null;
         }
 
         return (string) $response['token'];
+    }
+
+    /**
+     * Legacy method – deprecated, use getNewToken()
+     */
+    public function getToken(string $idBilling): ?string
+    {
+        return $this->getNewToken($idBilling);
     }
 
     public function getPaymentLink(string $token): ?string
@@ -57,7 +89,6 @@ class BimaQRService
             log_message('error', 'BIMAQR getLink failed. Error code: {code}', [
                 'code' => $response['errCode'] ?? 'NO_RESPONSE',
             ]);
-
             return null;
         }
 
@@ -79,8 +110,8 @@ class BimaQRService
             CURLOPT_USERPWD        => $this->username . ':' . $this->password,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
             CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_CONNECTTIMEOUT  => 10,
-            CURLOPT_TIMEOUT         => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 30,
         ]);
 
         $responseBody = curl_exec($ch);
@@ -94,7 +125,6 @@ class BimaQRService
                 'code'  => $httpCode,
                 'error' => $curlError,
             ]);
-
             return null;
         }
 
