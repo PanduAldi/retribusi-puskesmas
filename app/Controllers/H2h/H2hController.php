@@ -164,32 +164,23 @@ class H2hController extends BaseController
         }
 
         $noRm = $input['no_rm'] ?? null;
+        // --- Validasi keberadaan No. RM di sistem ---
+        $anyTransaksi = $this->db->table('transaksi_retribusi')
+            ->where('no_dokumen', $noRm)
+            ->countAllResults();
 
-        // --- Validasi no_rm: wajib numerik, max 20 karakter ---
-        if (empty($noRm) || !is_string($noRm) || !preg_match('/^[0-9]+$/', $noRm) || mb_strlen($noRm) > self::MAX_NO_RM) {
+        if ($anyTransaksi === 0) {
             $res = ['resp_code' => self::RESP_NOT_EXIST, 'resp_desc' => 'Payment Number Not Exist'];
             $this->logRequest('INQUIRY', $rawBody, json_encode($res));
             return $this->response->setJSON($res);
         }
 
         // --- Cari transaksi outstanding (status = pending) ---
-        // ponytail: fallback status numerik 0 dihapus — kolom status sudah VARCHAR('pending'/'paid')
         $transaksiList = $this->db->table('transaksi_retribusi')
             ->where('no_dokumen', $noRm)
             ->where('status', 'pending')
             ->get()
             ->getResultArray();
-
-        // --- Jika tidak ada transaksi dengan no_rm ini sama sekali → 01 ---
-        $anyTransaksi = $this->db->table('transaksi_retribusi')
-            ->where('no_dokumen', $noRm)
-            ->countAllResults();
-
-        if (empty($transaksiList) && $anyTransaksi === 0) {
-            $res = ['resp_code' => self::RESP_NOT_EXIST, 'resp_desc' => 'Payment Number Not Exist'];
-            $this->logRequest('INQUIRY', $rawBody, json_encode($res));
-            return $this->response->setJSON($res);
-        }
 
         // --- Jika no_rm ada tapi tidak ada tagihan outstanding → 02 ---
         if (empty($transaksiList)) {

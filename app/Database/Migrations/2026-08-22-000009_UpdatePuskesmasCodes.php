@@ -1,0 +1,1 @@
+UPDATE puskesmas SET kode_retribusi = 'P3329010101' WHERE prasarana = 'Puskesmas Salem';
