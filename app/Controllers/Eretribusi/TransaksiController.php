@@ -42,8 +42,9 @@ class TransaksiController extends BaseController
         }
 
         $query = $this->transaksiModel
-            ->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm')
-            ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left');
+            ->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm, puskesmas.prasarana')
+            ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left');
 
         if ($idPuskesmas) {
             $query->where('id_puskesmas', $idPuskesmas);
@@ -242,8 +243,9 @@ class TransaksiController extends BaseController
             $idPuskesmas = $this->request->getGet('id_puskesmas');
         }
 
-        $query = $this->transaksiModel->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm')
-            ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left');
+        $query = $this->transaksiModel->select('transaksi_retribusi.*, pasien.nama_pasien, pasien.no_rm, puskesmas.prasarana')
+            ->join('pasien', 'pasien.id = transaksi_retribusi.id_pasien', 'left')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left');
 
         if ($idPuskesmas) {
             $query->where('id_puskesmas', $idPuskesmas);
