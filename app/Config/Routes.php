@@ -64,6 +64,7 @@ $routes->group('eretribusi', ['namespace' => 'App\Controllers\Eretribusi', 'filt
     $routes->get('qris/(:segment)', 'BillingController::qris/$1');
     $routes->get('billing/cek-status', 'BillingController::cekStatus');
     $routes->post('billing/cek-status', 'BillingController::prosesCekStatus');
+    $routes->post('billing/cek-status-nrm', 'BillingController::cekStatusByNoRm');
 
     // Transaksi routes
     $routes->get('transaksi', 'TransaksiController::index');
