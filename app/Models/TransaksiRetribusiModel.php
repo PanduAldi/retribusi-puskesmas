@@ -15,9 +15,12 @@ class TransaksiRetribusiModel extends Model
         'invoice',
         'invoice_date',
         'status',
+        'id_billing',
         'noreff_bank',
+        'bank_status',
         'channel',
         'device',
+        'paid_at',
         'created_at',
         'updated_at'
     ];
