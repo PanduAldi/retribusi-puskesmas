@@ -310,9 +310,10 @@ class H2hController extends BaseController
             return $this->response->setStatusCode(401)->setJSON($res);
         }
 
-        $noRm         = $input['no_rm'] ?? null;
-        $totalTagihan = (int)($input['total_tagihan'] ?? 0);
-        $noreff       = $input['noreff'] ?? null;
+        $noRm         = trim($input['no_rm'] ?? '');
+        // Bank mengirim angka polos ("270000"); buang pemisah ribuan bila ada
+        $totalTagihan = (int) preg_replace('/[^0-9]/', '', (string)($input['total_tagihan'] ?? '0'));
+        $noreff       = trim($input['noreff'] ?? '');
 
         // --- Validasi no_rm ---
         if (empty($noRm) || !is_string($noRm) || !preg_match('/^[0-9]+$/', $noRm) || mb_strlen($noRm) > self::MAX_NO_RM) {
@@ -399,9 +400,10 @@ class H2hController extends BaseController
             ->update([
                 'status'      => 'paid',
                 'noreff_bank' => $noreff,
+                'bank_status' => self::RESP_SUCCESS,
                 'channel'     => $input['channel'] ?? '',
                 'device'      => $input['device'] ?? '',
-                'updated_at'  => date('Y-m-d H:i:s')
+                'paid_at'     => date('Y-m-d H:i:s')
             ]);
 
         $this->db->transComplete();
