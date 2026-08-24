@@ -370,32 +370,66 @@ class H2hController extends BaseController
 
         // --- UPDATE STATUS → PAID ---
         $this->db->transStart();
+        // --- UPDATE STATUS → PAID ---
+                $this->db->transStart();
 
-        $this->db->table('transaksi_retribusi')
-            ->whereIn('id', $transaksiIds)
-            ->update([
-                'status'      => 'paid',
-                'noreff_bank' => $noreff,
-                'bank_status' => self::RESP_SUCCESS,
-                'channel'     => $input['channel'] ?? '',
-                'device'      => $input['device'] ?? '',
-                'paid_at'     => date('Y-m-d H:i:s')
-            ]);
+                // Pastikan transaksi memiliki id_billing (jika belum, cek dulu)
+                $transaksiIds = $this->db->table('transaksi_retribusi')
+                    ->where('no_dokumen', $noRm)
+                    ->get()->getResultArray();
 
-        $this->db->transComplete();
+                if (empty($transaksiList)) {
+                    $res = ['resp_code' => self::RESP_NO_OUTSTANDING, 'resp_desc' => 'No Outstanding Bill Payment'];
+                    $this->logRequest('PAYMENT', $rawBody, json_encode($res));
+                    return $this->response->setJSON($res);
+                }
 
-        if ($this->db->transStatus() === false) {
-            $res = ['resp_code' => self::RESP_NO_OUTSTANDING, 'resp_desc' => 'No Outstanding Bill Payment'];
-            $this->logRequest('PAYMENT', $rawBody, json_encode($res));
-            return $this->response->setJSON($res);
-        }
+                // Cek apakah transaksi sudah punya id_billing (sudah diproses)
+                $transaksiId = $transaksiList[0]['id'];
+                $existing = $this->db->table('transaksi_retribusi')
+                    ->where('id', $transaksiId)
+                    ->first();
 
-        // --- Response sukses ---
-        $res = [
-            'resp_code' => self::RESP_SUCCESS,
-            'resp_desc' => 'Success',
-            'no_reff'   => $noreff
-        ];
+                if (empty($existing['id_billing'])) {
+                    // Belum ada ID billing → ini pertama kali, pastikan noreff_bank ada
+                    if (empty($noreff)) {
+                        $res = ['resp_code' => self::RESP_INVALID_PARAM, 'resp_desc' => 'noreff tidak boleh kosong'];
+                        $this->logRequest('PAYMENT', $rawBody, json_encode($res));
+                        return $this->response->setJSON($res);
+                    }
+
+                    // Simpan transaksi dengan noreff_bank baru
+                    $this->db->table('transaksi_retribusi')
+                        ->where('id', $transaksiId)
+                        ->update([
+                            'noreff_bank' => $noreff,
+                            'bank_status' => '00',
+                            'status'      => 'paid',
+                            'channel'     => $input['channel'] ?? '',
+                            'device'      => $input['device'] ?? '',
+                            'paid_at'     => date('Y-m-d H:i:s')
+                        ]);
+                } else {
+                    // Transaksi sudah pernah diproses → hanya update status bila diperlukan
+                    $this->db->table('transaksi_retribusi')
+                        ->where('id', $transaksiId)
+                        ->update(['status' => 'paid']);
+                }
+
+                $this->db->transComplete();
+
+                if ($this->db->transStatus() === false) {
+                    $res = ['resp_code' => self::RESP_NO_OUTSTANDING, 'resp_desc' => 'No Outstanding Bill Payment'];
+                    $this->logRequest('PAYMENT', $rawBody, json_encode($res));
+                    return $this->response->setJSON($res);
+                }
+
+                // --- Response sukses ---
+                $res = [
+                    'resp_code' => self::RESP_SUCCESS,
+                    'resp_desc' => 'Success',
+                    'no_reff'   => $noreff
+                ];
 
         $this->logRequest('PAYMENT', $rawBody, json_encode($res));
         return $this->response->setJSON($res);
