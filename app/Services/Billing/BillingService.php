@@ -84,18 +84,7 @@ class BillingService
             }
         }
 
-        // All attempts exhausted.
-        // In local development we can return a mock object so the UI can continue testing.
-        if (env('CI_ENVIRONMENT') === 'development') {
-            return [
-                'IdBilling' => '290032504302235',
-                'NoDokumen'=> $data['no_dokumen'],
-                'Nominal'  => $data['nominal'],
-                'Status'   => 'Pending',
-                'TglBayar'=> null,
-            ];
-        }
-
+        // Semua attempt gagal
         return null;
     }
 
@@ -139,19 +128,6 @@ class BillingService
 
         if ($httpCode !== 200 || !$response) {
             log_message('error', 'Billing API Check Status failure: HTTP ' . $httpCode . ' - ' . $error);
-
-            // For testing/fallback simulation if external server is mock/not fully connected
-            // kita bisa kembalikan data mock untuk validasi di local environment.
-            // Di lingkungan production sesungguhnya, ini harus mengembalikan null.
-            if (env('CI_ENVIRONMENT') === 'development') {
-                return [
-                    'IdBilling' => $idBilling,
-                    'NoDokumen' => 'SIMULASI-DOC-12345',
-                    'Nominal' => 50000,
-                    'Status' => 'LUNAS',
-                    'TglBayar' => date('Y-m-d H:i:s')
-                ];
-            }
             return null;
         }
 
