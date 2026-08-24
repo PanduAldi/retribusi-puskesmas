@@ -173,20 +173,12 @@ class H2hController extends BaseController
         }
 
         // --- Cari transaksi outstanding (status = pending) ---
+        // ponytail: fallback status numerik 0 dihapus — kolom status sudah VARCHAR('pending'/'paid')
         $transaksiList = $this->db->table('transaksi_retribusi')
             ->where('no_dokumen', $noRm)
             ->where('status', 'pending')
             ->get()
             ->getResultArray();
-
-        // Fallback: status numerik 0 (data lama)
-        if (empty($transaksiList)) {
-            $transaksiList = $this->db->table('transaksi_retribusi')
-                ->where('no_dokumen', $noRm)
-                ->where('status', 0)
-                ->get()
-                ->getResultArray();
-        }
 
         // --- Jika tidak ada transaksi dengan no_rm ini sama sekali → 01 ---
         $anyTransaksi = $this->db->table('transaksi_retribusi')
@@ -345,20 +337,13 @@ class H2hController extends BaseController
             return $this->response->setJSON($res);
         }
 
-        // --- Cari transaksi outstanding ---
+        // --- Cari transaksi outstanding (status = pending) ---
+        // ponytail: fallback status numerik 0 dihapus — kolom status sudah VARCHAR('pending'/'paid')
         $transaksiList = $this->db->table('transaksi_retribusi')
             ->where('no_dokumen', $noRm)
             ->where('status', 'pending')
             ->get()
             ->getResultArray();
-
-        if (empty($transaksiList)) {
-            $transaksiList = $this->db->table('transaksi_retribusi')
-                ->where('no_dokumen', $noRm)
-                ->where('status', 0)
-                ->get()
-                ->getResultArray();
-        }
 
         // --- Jika tidak ada transaksi → 02 ---
         if (empty($transaksiList)) {
