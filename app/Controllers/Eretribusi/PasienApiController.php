@@ -3,17 +3,13 @@
 namespace App\Controllers\Eretribusi;
 
 use App\Controllers\BaseController;
-use App\Models\TransaksiRetribusiModel;
+use App\Models\PasienModel;
 
 class PasienApiController extends BaseController
 {
     public function getPasien($noRm)
     {
-        $model = new TransaksiRetribusiModel();
-        // Cari data pasien terbaru berdasarkan no_dokumen (No RM)
-        $pasien = $model->where('no_dokumen', $noRm)
-            ->orderBy('id', 'DESC')
-            ->first();
+        $pasien = (new PasienModel())->findByNoRm($noRm);
 
         if ($pasien) {
             return $this->response->setJSON([
