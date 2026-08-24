@@ -135,6 +135,58 @@ class BillingController extends BaseController
     }
 
     /**
+     * Cek status transaksi berdasarkan No. RM (tanpa ID Billing)
+     */
+    public function cekStatusByNoRm()
+    {
+        $noRm = $this->request->getPost('no_rm');
+
+        if (empty($noRm) || !preg_match('/^[0-9]+$/', $noRm) || mb_strlen($noRm) > 20) {
+            return redirect()->back()->with('notif_gagal', 'No. RM tidak valid.');
+        }
+
+        // Cari transaksi pending yang punya invoice & id_billing
+        $transaksi = $this->transaksiModel
+            ->select('transaksi_retribusi.*, puskesmas.kode_retribusi, puskesmas.prasarana')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left')
+            ->where('no_dokumen', $noRm)
+            ->where('status', 'pending')
+            ->orderBy('invoice_date', 'DESC')
+            ->first();
+
+        if (empty($transaksi) || empty($transaksi['id_billing'])) {
+            return view('eretribusi/cek_status_result', [
+                'status' => null,
+                'error'  => 'Tidak ada tagihan pending untuk No. RM ini.'
+            ]);
+        }
+
+        // Query ke billing service
+        $status = $this->billingService->cekStatusPembayaran($transaksi['id_billing']);
+
+        if (!$status) {
+            return view('eretribusi/cek_status_result', [
+                'status' => null,
+                'error'  => 'Gagal mengambil data status dari server billing.'
+            ]);
+        }
+
+        // Jika LUNAS, update database lokal
+        if ($status['Status'] === 'LUNAS') {
+            $this->transaksiModel->where('id_billing', $transaksi['id_billing'])
+                ->set(['status' => 'paid'])
+                ->update();
+        }
+
+        return view('eretribusi/cek_status_result', [
+            'status'        => $status,
+            'id_billing'    => $transaksi['id_billing'],
+            'no_rm'         => $noRm,
+            'transaksi'     => $transaksi
+        ]);
+    }
+
+    /**
      * Proses pengecekan status ke Billing Server
      */
     public function prosesCekStatus()
