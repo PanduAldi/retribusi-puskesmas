@@ -156,6 +156,17 @@ class BillingController extends BaseController
             ->where('no_dokumen', $noRm)
             ->orderBy('id', 'DESC')
             ->first();
+        // History transaksi sebelumnya (kecuali yang terbaru)
+        $history = $this->transaksiModel
+            ->select('transaksi_retribusi.*, puskesmas.kode_retribusi, puskesmas.prasarana')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left')
+            ->where('no_dokumen', $noRm)
+            ->orderBy('id', 'DESC')
+            ->findAll();
+        // Remove transaksi terbaru dari riwayat
+        if (!empty($history)) {
+            array_shift($history);
+        }
 
         if (empty($transaksi)) {
             return view('eretribusi/cek_status_result', [
@@ -192,7 +203,8 @@ class BillingController extends BaseController
         return view('eretribusi/cek_status_result', [
             'status' => $res,
             'id_billing' => $res['IdBilling'],
-            'no_rm'    => $noRm
+            'no_rm'    => $noRm,
+            'history'  => $history ?? []
         ]);
     }
 

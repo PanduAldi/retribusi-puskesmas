@@ -88,6 +88,52 @@
         </div>
         <?php endif; ?>
 
+        <?php if (!empty($history)): ?>
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-header bg-light">
+                <h4><i class="fas fa-history"></i> Riwayat Transaksi Sebelumnya</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>ID Billing</th>
+                                <th>Invoice</th>
+                                <th>Puskesmas</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($history as $h): ?>
+                            <tr>
+                                <td><?= date('d/m/Y H:i', strtotime($h['created_at'])) ?></td>
+                                <td><?= esc($h['id_billing'] ?: '-') ?></td>
+                                <td><?= esc($h['invoice']) ?></td>
+                                <td><?= esc($h['prasarana']) ?></td>
+                                <td>
+                                    <?php if (strtolower($h['status']) === 'paid' || strtolower($h['status']) === 'lunas'): ?>
+                                        <span class="badge badge-success">LUNAS</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-warning">BELUM LUNAS</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <a href="<?= base_url('eretribusi/billing/konfirmasi/' . $h['invoice']) ?>" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> Detail
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
     <?php else: ?>
         <div class="alert alert-danger">
             <i class="fas fa-exclamation-triangle"></i>
