@@ -302,7 +302,7 @@
                         Pastikan seluruh item layanan sudah sesuai sebelum menekan tombol simpan.
                     </div>
 
-                    <button type="submit" class="btn btn-warning" style="width: 100%; height: 60px; font-size: 1.1rem; font-weight: 800; border-radius: 12px; box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);">
+                    <button type="button" class="btn btn-warning" onclick="showKonfirmasiModal()" style="width: 100%; height: 60px; font-size: 1.1rem; font-weight: 800; border-radius: 12px; box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);">
                         <i class="fas fa-check-double"></i> SIMPAN & PROSES
                     </button>
 
@@ -323,6 +323,204 @@
         </div>
     </form>
 
+    <!-- Modal Konfirmasi Sebelum Simpan -->
+    <style>
+        .modal-konfirmasi {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+        }
+        .modal-konfirmasi-dialog {
+            position: relative;
+            width: 90%;
+            max-width: 600px;
+            margin: 40px auto;
+        }
+        .modal-konfirmasi-content {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .modal-konfirmasi-header {
+            padding: 20px 25px;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffc107;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-konfirmasi-body {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .modal-konfirmasi-footer {
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+
+    <div id="modal-konfirmasi" class="modal-konfirmasi">
+        <div class="modal-konfirmasi-dialog">
+            <div class="modal-konfirmasi-content">
+                <div class="modal-konfirmasi-header">
+                    <h4 style="margin: 0; font-weight: 700; color: #856404; font-size: 1.1rem;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>Konfirmasi Transaksi
+                    </h4>
+                    <button type="button" onclick="closeKonfirmasiModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888;">&times;</button>
+                </div>
+                <div class="modal-konfirmasi-body">
+                    <div class="alert alert-warning" style="font-size: 0.9rem; margin-bottom: 20px;">
+                        <i class="fas fa-info-circle"></i>
+                        Periksa kembali data berikut sebelum menyimpan. Data yang sudah diproses <strong>tidak dapat diubah</strong>.
+                    </div>
+
+                    <!-- Info Pasien -->
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                        <h5 style="font-weight: 700; font-size: 0.9rem; color: #1a237e; margin-bottom: 12px;">
+                            <i class="fas fa-user"></i> Data Pasien
+                        </h5>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+                            <div>
+                                <span style="color: #666;">No. RM:</span>
+                                <strong id="konfirm-rm" style="margin-left: 5px;">-</strong>
+                            </div>
+                            <div>
+                                <span style="color: #666;">Nama:</span>
+                                <strong id="konfirm-nama" style="margin-left: 5px;">-</strong>
+                            </div>
+                            <div>
+                                <span style="color: #666;">Jenis Kelamin:</span>
+                                <span id="konfirm-jk" style="margin-left: 5px;">-</span>
+                            </div>
+                            <div>
+                                <span style="color: #666;">Tgl Lahir:</span>
+                                <span id="konfirm-tgl" style="margin-left: 5px;">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rincian Layanan -->
+                    <h5 style="font-weight: 700; font-size: 0.9rem; color: #333; margin-bottom: 12px;">
+                        <i class="fas fa-list"></i> Rincian Layanan & Tarif
+                    </h5>
+                    <div style="border: 1px solid #eee; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 1px solid #eee;">
+                                    <th style="padding: 8px 12px; text-align: left; font-size: 0.8rem;">Jenis Layanan</th>
+                                    <th style="padding: 8px; text-align: center; font-size: 0.8rem; width: 60px;">Vol</th>
+                                    <th style="padding: 8px 12px; text-align: right; font-size: 0.8rem; width: 120px;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="konfirm-items-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 2px solid #eef0f7;">
+                        <strong style="color: #555;">TOTAL BAYAR</strong>
+                        <strong id="konfirm-total" style="color: #1a237e; font-size: 1.4rem;">Rp 0</strong>
+                    </div>
+                </div>
+                <div class="modal-konfirmasi-footer">
+                    <button type="button" class="btn" style="background: #e9ecef; color: #495057;" onclick="closeKonfirmasiModal()">
+                        <i class="fas fa-pencil-alt"></i> Kembali & Edit
+                    </button>
+                    <button type="button" class="btn btn-warning" style="font-weight: 700;" onclick="submitTransaksi()">
+                        <i class="fas fa-check-double"></i> Ya, Simpan & Proses
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function showKonfirmasiModal() {
+        var form = document.getElementById('transaksiForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Populate pasien info
+        document.getElementById('konfirm-rm').innerText = document.getElementById('no_dokumen').value || '-';
+        document.getElementById('konfirm-nama').innerText = document.getElementById('nama_pasien').value || '-';
+        document.getElementById('konfirm-jk').innerText = document.getElementById('jenis_kelamin').value || '-';
+
+        var tglLahir = document.getElementById('tgl_lahir').value;
+        if (tglLahir) {
+            var d = new Date(tglLahir);
+            document.getElementById('konfirm-tgl').innerText = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        } else {
+            document.getElementById('konfirm-tgl').innerText = '-';
+        }
+
+        // Populate items
+        var rows = document.querySelectorAll('.item-row');
+        var tbody = document.getElementById('konfirm-items-body');
+        tbody.innerHTML = '';
+        var grandTotal = 0;
+        var hasValidItem = false;
+
+        rows.forEach(function(row) {
+            var select = row.querySelector('.id_jenis');
+            if (select.selectedIndex <= 0) return; // Skip empty rows
+
+            hasValidItem = true;
+            var volume = row.querySelector('.volume').value;
+            var subtotalVal = parseFloat(row.querySelector('.subtotal-val').value) || 0;
+            var jenisText = select.options[select.selectedIndex].text.trim();
+
+            grandTotal += subtotalVal;
+
+            var tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 8px 12px; font-size: 0.85rem; font-weight: 600; color: #444;">${jenisText}</td>
+                <td style="padding: 8px; text-align: center; font-size: 0.85rem;">${volume}</td>
+                <td style="padding: 8px 12px; text-align: right; font-weight: 700; font-size: 0.85rem;">Rp ${new Intl.NumberFormat('id-ID').format(subtotalVal)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (!hasValidItem) {
+            alert('Mohon pilih minimal 1 layanan/retribusi.');
+            return;
+        }
+
+        document.getElementById('konfirm-total').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(grandTotal);
+
+        document.getElementById('modal-konfirmasi').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeKonfirmasiModal() {
+        document.getElementById('modal-konfirmasi').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function submitTransaksi() {
+        document.getElementById('transaksiForm').submit();
+    }
+
+    window.addEventListener('click', function(event) {
+        var modal = document.getElementById('modal-konfirmasi');
+        if (event.target === modal) {
+            closeKonfirmasiModal();
+        }
+    });
+    </script>
     <script>
     $(document).ready(function() {
         initSelect2();
