@@ -18,7 +18,7 @@ class BillingController extends BaseController
     protected $transaksiModel;
     protected $billModel;
     protected $puskesmasModel;
-    protected $transaksiItemModel;
+    protected $transaksiItem;
 
     public function __construct()
     {
@@ -167,7 +167,7 @@ class BillingController extends BaseController
         // Hitung nominal total dari items
         $transaksiId = $transaksi['id'];
 
-        $items = $this->transaksiItemModel->select('SUM(amount) as total')
+        $items = $this->transaksiItem->select('SUM(amount) as total')
             ->where('id_transaksi', $transaksiId)
             ->first();
         $nominal = (int)($items['total'] ?? 0);
