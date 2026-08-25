@@ -109,7 +109,7 @@
                         <tbody>
                             <?php foreach ($history as $h): ?>
                             <tr>
-                                <td><?= date('d/m/Y H:i', strtotime($h['invoice_date'])) ?></td>
+                                <td><?= !empty($h['created_at']) ? date('d/m/Y H:i', strtotime($h['created_at'])) : '-' ?></td>
                                 <td><?= esc($h['id_billing'] ?: '-') ?></td>
                                 <td><?= esc($h['invoice']) ?></td>
                                 <td><?= esc($h['prasarana']) ?></td>
