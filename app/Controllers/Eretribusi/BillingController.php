@@ -24,7 +24,7 @@ class BillingController extends BaseController
     {
         $this->billingService = new BillingService();
         $this->transaksiModel = new TransaksiRetribusiModel();
-        $this->transaskiItem = new TransaksiItemModel();
+        $this->transaksiItem = new TransaksiItemModel();
         $this->billModel      = new BillModel();
         $this->puskesmasModel = new PuskesmasModel();
     }
