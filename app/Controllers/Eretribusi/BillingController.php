@@ -183,6 +183,9 @@ class BillingController extends BaseController
             ->first();
         $nominal = (int)($items['total'] ?? 0);
 
+        // Ambil rincian item untuk detail
+        $itemsDetail = $this->transaksiItem->getItemsByTransaksi($transaksiId);
+
         // Cek status transaksi di DB
         $dbStatus = strtolower($transaksi['status'] ?? '');
 
@@ -204,6 +207,7 @@ class BillingController extends BaseController
             'status' => $res,
             'id_billing' => $res['IdBilling'],
             'no_rm'    => $noRm,
+            'items_detail' => $itemsDetail ?? [],
             'history'  => $history ?? []
         ]);
     }
@@ -241,32 +245,30 @@ class BillingController extends BaseController
     /**
      * Tampilkan halaman QRIS
      */
-    public function qris(string $idBilling)
+    /**
+     * API: Ambil detail transaksi (JSON)
+     */
+    public function getDetail(string $invoice)
     {
         $transaksi = $this->transaksiModel
-            ->where('id_billing', $idBilling)
+            ->select('transaksi_retribusi.*, puskesmas.prasarana')
+            ->join('puskesmas', 'puskesmas.id = transaksi_retribusi.id_puskesmas', 'left')
+            ->where('invoice', $invoice)
             ->first();
 
-        if (empty($transaksi)) {
-            return redirect()->to('/')->with('notif_gagal', 'Data billing tidak ditemukan.');
+        if (!$transaksi) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Transaksi tidak ditemukan']);
         }
 
-        $items = (new \App\Models\TransaksiItemModel())->getItemsByTransaksi($transaksi['id']);
+        $items = $this->transaksiItem->getItemsByTransaksi($transaksi['id']);
 
-        $idPuskesmas = $transaksi['id_puskesmas'];
-        $puskesmas   = $this->puskesmasModel->find($idPuskesmas);
-
-        $paymentLink = (new BimaQRService())->getPaymentLinkByIdBilling($idBilling);
-        if (empty($paymentLink)) {
-            return redirect()->back()->with('notif_gagal', 'Gagal membuat link pembayaran QRIS. Silakan coba lagi.');
+        $total = 0;
+        foreach($items as $it) {
+            $total += $it['amount'];
         }
+        $transaksi['amount'] = $total;
+        $transaksi['items_detail'] = $items;
 
-        return view('eretribusi/qris', [
-            'id_billing'       => $idBilling,
-            'transaksi_master' => $transaksi,
-            'items'            => $items,
-            'puskesmas'        => $puskesmas,
-            'paymentLink'      => $paymentLink,
-        ]);
+        return $this->response->setJSON($transaksi);
     }
 }
