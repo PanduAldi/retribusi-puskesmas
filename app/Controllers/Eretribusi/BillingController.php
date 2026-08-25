@@ -9,6 +9,8 @@ use App\Models\TransaksiRetribusiModel;
 use App\Services\Billing\BillingService;
 use App\Services\BimaQRService;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Models\TransaksiItemModel;
+
 
 class BillingController extends BaseController
 {
@@ -21,6 +23,7 @@ class BillingController extends BaseController
     {
         $this->billingService = new BillingService();
         $this->transaksiModel = new TransaksiRetribusiModel();
+        $this->transaskiItemModel = new TransaksiItemModel();
         $this->billModel      = new BillModel();
         $this->puskesmasModel = new PuskesmasModel();
     }
@@ -162,11 +165,10 @@ class BillingController extends BaseController
 
         // Hitung nominal total dari items
         $transaksiId = $transaksi['id'];
-        $items = $this->db->table('transaksi_item')
-            ->select('SUM(amount) as total')
+
+        $items = $this->transaksiItemModel->select('SUM(amount) as total')
             ->where('id_transaksi', $transaksiId)
-            ->get()
-            ->getRowArray();
+            ->first();
         $nominal = (int)($items['total'] ?? 0);
 
         // Cek status transaksi di DB
