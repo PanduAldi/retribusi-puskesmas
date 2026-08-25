@@ -18,12 +18,13 @@ class BillingController extends BaseController
     protected $transaksiModel;
     protected $billModel;
     protected $puskesmasModel;
+    protected $transaksiItemModel;
 
     public function __construct()
     {
         $this->billingService = new BillingService();
         $this->transaksiModel = new TransaksiRetribusiModel();
-        $this->transaskiItemModel = new TransaksiItemModel();
+        $this->transaskiItem = new TransaksiItemModel();
         $this->billModel      = new BillModel();
         $this->puskesmasModel = new PuskesmasModel();
     }
