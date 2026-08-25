@@ -182,6 +182,7 @@ class TransaksiController extends BaseController
             'id_puskesmas'  => $idPuskesmas,
             'id_pasien'     => $idPasien,
             'no_dokumen'    => $noDokumen,
+            'id_billing'    => $noDokumen,
             'invoice'       => $invoice,
             'invoice_date'  => date('Y-m-d'),
             'status'        => 'pending'
